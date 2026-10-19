@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { WS_URL } from '../services/config';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { RiskLevel, Appointment } from '../types';
 import { appointmentService } from '../services/appointmentService';
@@ -23,7 +24,7 @@ export const Dashboard: React.FC = () => {
     const allAppointments = appointmentService.getAll();
     setAppointments(allAppointments);
 
-    const ws = new WebSocket('ws://localhost:8000/ws');
+    const ws = new WebSocket(WS_URL);
     ws.onopen = () => console.log('Connected to WebSocket');
     ws.onmessage = (event) => console.log('Update received:', event.data);
     return () => ws.close();

@@ -1,7 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { runDiagnosticChat } from '../services/geminiService';
-import { useAuth } from '../context/AuthContext';
-import { Link } from 'react-router-dom';
+import { api } from '../services/api';
 
 interface Message {
   id: string;
@@ -11,38 +9,17 @@ interface Message {
 }
 
 export const Diagnostics: React.FC = () => {
-  const { apiKey } = useAuth(); // Local manual key
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
       role: 'model',
-      text: 'Hello, Dr. Chen. I am ready to assist with differential diagnoses and medical research. What cases are we reviewing today?',
+      text: 'Hello. I can summarise guidelines, explain terms and help you think through a case. I do not make diagnoses or prescribe; final decisions stay with the treating clinician.',
       timestamp: new Date()
     }
   ]);
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
-
-  // State for AI Studio Key check
-  const [hasStudioKey, setHasStudioKey] = useState(false);
-  const [checkingStudioKey, setCheckingStudioKey] = useState(true);
-
-  useEffect(() => {
-    const checkStudioKey = async () => {
-      const win = window as any;
-      if (win.aistudio) {
-        try {
-          const hasSelected = await win.aistudio.hasSelectedApiKey();
-          setHasStudioKey(hasSelected);
-        } catch (e) {
-          console.error("Failed to check AI Studio key", e);
-        }
-      }
-      setCheckingStudioKey(false);
-    };
-    checkStudioKey();
-  }, []);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -52,12 +29,6 @@ export const Diagnostics: React.FC = () => {
 
   const handleSend = async () => {
     if (!input.trim()) return;
-    
-    // Check if we have a key before sending
-    if (!apiKey && !process.env.API_KEY && !hasStudioKey) {
-        alert("Please configure an API Key first.");
-        return;
-    }
     
     const userMsg: Message = {
       id: Date.now().toString(),
@@ -74,7 +45,7 @@ export const Diagnostics: React.FC = () => {
       // Prepare history for API
       const history = messages.map(m => ({ role: m.role, text: m.text }));
       
-      const responseText = await runDiagnosticChat(history, userMsg.text);
+      const responseText = await api.assistantChat(history, userMsg.text);
       
       const aiMsg: Message = {
         id: (Date.now() + 1).toString(),
@@ -85,18 +56,7 @@ export const Diagnostics: React.FC = () => {
       setMessages(prev => [...prev, aiMsg]);
     } catch (error: any) {
         console.error(error);
-        let errorText = "Error: Unable to connect to AI service.";
-        
-        // Handle specific "Entity not found" error which implies key issues in Studio flow
-        if (error.message?.includes('Requested entity was not found')) {
-             const win = window as any;
-             if (win.aistudio) {
-                 setHasStudioKey(false); // Reset state to prompt selection again
-                 errorText = "Session expired or key invalid. Please select your API Key again.";
-             }
-        } else if (error.message?.includes('API Key missing')) {
-            errorText = "API Key missing. Please configure it.";
-        }
+        const errorText = error?.message || "Error: Unable to reach the AI assistant on the server.";
 
       const errorMsg: Message = {
         id: (Date.now() + 1).toString(),
@@ -110,71 +70,12 @@ export const Diagnostics: React.FC = () => {
     }
   };
 
-  const handleSelectKey = async () => {
-    const win = window as any;
-    if (win.aistudio) {
-        try {
-            await win.aistudio.openSelectKey();
-            // Race condition mitigation: Assume success immediately as per docs
-            setHasStudioKey(true);
-        } catch (e) {
-            console.error("Selection failed", e);
-        }
-    }
-  };
-
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
     }
   };
-
-  // Show blocker if we've finished checking and have no key source
-  const showBlocker = !checkingStudioKey && !apiKey && !process.env.API_KEY && !hasStudioKey;
-
-  if (showBlocker) {
-    return (
-      <div className="h-full flex items-center justify-center p-6 animate-in fade-in duration-500">
-        <div className="bg-surface-light dark:bg-surface-dark p-10 rounded-clay shadow-clay dark:shadow-clay-dark text-center max-w-md border border-white/50 dark:border-slate-700">
-          <div className="w-20 h-20 bg-amber-100 dark:bg-amber-900/30 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
-            <span className="material-symbols-outlined text-4xl">key_off</span>
-          </div>
-          <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">API Key Required</h2>
-          <p className="text-slate-500 dark:text-slate-400 mb-8 leading-relaxed">
-            To access the advanced AI Diagnostic Suite, you must provide a valid Gemini API Key. This prevents usage limits on the development environment.
-          </p>
-          
-          <div className="space-y-4">
-            {(window as any).aistudio ? (
-                <>
-                  <button 
-                      onClick={handleSelectKey}
-                      className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-bold shadow-clay-primary hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all"
-                  >
-                      <span className="material-symbols-outlined">api</span>
-                      Connect Google AI Studio
-                  </button>
-                  <p className="text-[10px] text-slate-400 mt-2">
-                    <a href="https://ai.google.dev/gemini-api/docs/billing" target="_blank" rel="noreferrer" className="underline hover:text-primary transition-colors">
-                        Learn about billing
-                    </a>
-                  </p>
-                </>
-            ) : (
-                 <Link 
-                    to="/config" 
-                    className="w-full inline-flex items-center justify-center gap-2 px-6 py-4 bg-primary text-white rounded-xl font-bold shadow-clay-primary hover:-translate-y-0.5 transition-all"
-                >
-                    <span className="material-symbols-outlined">settings</span>
-                    Go to Configuration
-                </Link>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="flex flex-col h-full max-h-screen p-4 md:p-6 gap-6 max-w-[1600px] mx-auto animate-in fade-in duration-500">
@@ -259,7 +160,7 @@ export const Diagnostics: React.FC = () => {
             </button>
           </div>
           <p className="text-center text-[10px] text-slate-400 mt-2">
-            AI generated content may be inaccurate. Verify important information.
+            AI-generated content may be inaccurate. Not a substitute for a doctor's judgement. Do not enter real patient identifiers.
           </p>
         </div>
 

@@ -14,6 +14,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { SymptomsReview } from './pages/SymptomsReview';
 import { QuickFix } from './pages/QuickFix';
 import { GlobalEmergencyButton } from './components/GlobalEmergencyButton';
+import { BackendStatusBanner } from './components/BackendStatusBanner';
 
 const Header: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }) => {
   const location = useLocation();
@@ -78,7 +79,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             <h2 className="text-2xl font-bold text-slate-800 dark:text-white flex items-center gap-3">
               {location.pathname === '/' ? 'Intelligence Hub' :
                 location.pathname === '/queue' ? 'Live Triage' :
-                  location.pathname === '/config' ? 'Configuration' :
+                  location.pathname === '/config' ? 'System Status' :
                     location.pathname === '/diagnostics' ? 'Diagnostics' :
                       location.pathname === '/triage' ? 'Assessment' :
                         location.pathname === '/my-health' ? 'My Health' : 'System View'}
@@ -137,6 +138,7 @@ export default function App() {
   return (
     <AuthProvider>
       <Router>
+        <BackendStatusBanner />
         <GlobalEmergencyButton />
         <Layout>
           <Routes>

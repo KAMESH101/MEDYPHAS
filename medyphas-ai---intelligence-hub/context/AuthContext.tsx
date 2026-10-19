@@ -1,31 +1,28 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User, UserRole } from '../types';
+import { User } from '../types';
 
 interface AuthContextType {
   user: User | null;
   login: (user: User, token: string) => void;
   logout: () => void;
-  apiKey: string;
-  setApiKey: (key: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [apiKey, setApiKeyState] = useState<string>('');
+  // Read the persisted user synchronously so a page refresh doesn't bounce to /login.
+  const [user, setUser] = useState<User | null>(() => {
+    try {
+      const storedUser = localStorage.getItem('medyphas_user');
+      return storedUser ? JSON.parse(storedUser) : null;
+    } catch {
+      return null;
+    }
+  });
 
   useEffect(() => {
-    // Load persisted state
-    const storedUser = localStorage.getItem('medyphas_user');
-    const storedKey = localStorage.getItem('medyphas_api_key');
-
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-    if (storedKey) {
-      setApiKeyState(storedKey);
-    }
+    // Remove any Gemini key saved by older versions of the app.
+    localStorage.removeItem('medyphas_api_key');
   }, []);
 
   const login = (userData: User, token: string) => {
@@ -40,17 +37,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem('medyphas_token');
   };
 
-  const setApiKey = (key: string) => {
-    setApiKeyState(key);
-    if (key) {
-      localStorage.setItem('medyphas_api_key', key);
-    } else {
-      localStorage.removeItem('medyphas_api_key');
-    }
-  };
-
   return (
-    <AuthContext.Provider value={{ user, login, logout, apiKey, setApiKey }}>
+    <AuthContext.Provider value={{ user, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

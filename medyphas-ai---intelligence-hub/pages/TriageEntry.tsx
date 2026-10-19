@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { api } from '../services/api';
 import { RiskLevel, HealthFormData } from '../types';
-import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
 import { EHRUpload } from '../components/EHRUpload';
@@ -10,7 +9,6 @@ import { HealthInputForm } from '../components/HealthInputForm';
 
 export const TriageEntry: React.FC = () => {
   const navigate = useNavigate();
-  const { apiKey } = useAuth();
   const [loading, setLoading] = useState(false);
 
   const [result, setResult] = useState<any>(null);
@@ -19,26 +17,7 @@ export const TriageEntry: React.FC = () => {
   // EHR Upload State
   const [showEHRUpload, setShowEHRUpload] = useState(true);
 
-  // BYOK State
-  const [hasStudioKey, setHasStudioKey] = useState(false);
-  const [checkingStudioKey, setCheckingStudioKey] = useState(true);
   const [initialFormData, setInitialFormData] = useState<Partial<HealthFormData> | undefined>();
-
-  useEffect(() => {
-    const checkStudioKey = async () => {
-      const win = window as any;
-      if (win.aistudio) {
-        try {
-          const hasSelected = await win.aistudio.hasSelectedApiKey();
-          setHasStudioKey(hasSelected);
-        } catch (e) {
-          console.error(e);
-        }
-      }
-      setCheckingStudioKey(false);
-    };
-    checkStudioKey();
-  }, []);
 
   const handleEHRUploadSuccess = (data: Partial<HealthFormData>) => {
     console.log('EHR data loaded for patient:', data);
@@ -130,12 +109,6 @@ export const TriageEntry: React.FC = () => {
                 </p>
               </div>
             </div>
-            {((window as any).aistudio && hasStudioKey) && (
-              <div className="px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-lg text-xs font-bold border border-green-200 dark:border-green-800 flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                AI Studio Connected
-              </div>
-            )}
           </div>
 
           {/* Conditional EHR Upload or Form */}
