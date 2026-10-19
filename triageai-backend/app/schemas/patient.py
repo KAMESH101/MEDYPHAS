@@ -1,5 +1,5 @@
 """Pydantic schemas for patient data validation."""
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from typing import List, Optional
 from enum import Enum
 from datetime import datetime
@@ -52,7 +52,7 @@ class PatientInput(BaseModel):
 
 
 class TopFactor(BaseModel):
-    """SHAP factor contribution."""
+    """Model feature contribution."""
     
     feature: str
     contribution: float
@@ -75,6 +75,8 @@ class TriageOutput(BaseModel):
 class PatientResponse(BaseModel):
     """Patient database record response."""
     
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     age: int
     gender: str
@@ -92,6 +94,3 @@ class PatientResponse(BaseModel):
     shap_factors: Optional[List[dict]]
     explanation: Optional[str]
     created_at: datetime
-    
-    class Config:
-        from_attributes = True

@@ -30,7 +30,7 @@ class Settings(BaseSettings):
     CORS_ORIGINS: str = "http://localhost:3000,http://localhost:5173"
 
     # Auth
-    SECRET_KEY: str = "dev-only-change-me"
+    SECRET_KEY: str = "dev-only-insecure-secret-set-SECRET_KEY-in-env"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
 
     # Demo accounts created on startup (public prototype credentials, documented in README)

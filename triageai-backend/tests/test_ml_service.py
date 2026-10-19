@@ -51,3 +51,41 @@ def test_build_features():
     assert features_df['condition_diabetes'].iloc[0] == 1
     assert features_df['symptom_count'].iloc[0] == 2
     assert features_df['condition_count'].iloc[0] == 1
+
+
+def test_committed_model_loads():
+    """The trained model in ml/models/ is committed and loads without training."""
+    assert ml_service.is_loaded()
+
+
+def test_predict_returns_valid_output(sample_patient_normal):
+    risk, confidence, factors = ml_service.predict(sample_patient_normal)
+
+    assert risk in {'LOW', 'MEDIUM', 'HIGH'}
+    assert 0.0 <= confidence <= 1.0
+    assert 0 < len(factors) <= 3
+    assert all(f.direction in {'increases', 'decreases'} for f in factors)
+
+
+def test_factor_failure_returns_empty_list(sample_patient_normal, monkeypatch):
+    """If contributions can't be computed, prediction still succeeds with no factors."""
+    real_predict = ml_service.booster.predict
+
+    def broken_predict(dmatrix, pred_contribs=False, **kwargs):
+        if pred_contribs:
+            raise RuntimeError("boom")
+        return real_predict(dmatrix, **kwargs)
+
+    monkeypatch.setattr(ml_service.booster, 'predict', broken_predict)
+    risk, confidence, factors = ml_service.predict(sample_patient_normal)
+
+    assert risk in {'LOW', 'MEDIUM', 'HIGH'}
+    assert factors == []
+
+
+def test_missing_model_dir_fails_gracefully(tmp_path):
+    from app.services.ml_service import MLService
+
+    service = MLService()
+    assert service.load_models(tmp_path) is False
+    assert not service.is_loaded()
