@@ -5,7 +5,7 @@ __pycache__
 .Python
 *.so
 .env
-.venv
+.venv*
 venv/
 ENV/
 .git
@@ -19,3 +19,4 @@ Dockerfile
 ml/data/*.csv
 *.log
 *.db
+data/
