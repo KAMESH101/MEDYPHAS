@@ -1,92 +1,73 @@
-# Medyphas AI - Project Setup & Run Instructions
+# Medyphas AI - Local Setup & Run Instructions
 
-This guide will help you set up and run both the Backend and Frontend of the Medyphas AI application.
+Prototype for Dexathon 2026 (team Codofobia). Demo data only - not medical advice.
 
 ## Prerequisites
-- **Python 3.13** (Required for backend compatibility)
-- **Node.js** (Required for frontend)
+- Python 3.11
+- Node.js 20+ (tested with Node 24)
+- Optional: a Gemini API key (https://aistudio.google.com/app/apikey) for AI explanations,
+  document upload and the staff assistant. Without it the app still runs with fallback text.
 
 ---
 
-## 1. Backend Setup (`triageai-backend`)
+## 1. Backend (`triageai-backend`)
 
-The backend is built with FastAPI. Currently, we are running a lightweight version focused on Authentication.
-
-### Step 1: Navigate to the backend directory
 ```bash
-cd "triageai-backend"
+cd triageai-backend
+python3.11 -m venv .venv            # Windows: py -3.11 -m venv .venv  (or: uv venv --python 3.11)
+source .venv/bin/activate           # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+cp .env.example .env                # then put your GEMINI_API_KEY in .env (optional)
+uvicorn app.main:app --reload --port 8000
 ```
 
-### Step 2: Create a Virtual Environment (Python 3.13)
-If you haven't already created one:
+There is ONE entry point: `app.main:app` (auth, triage, analytics, AI assistant).
+The trained model is already in `ml/models/`, so no training is needed.
+
+Check it: http://localhost:8000/api/health  ->  "model_loaded": true
+API docs:  http://localhost:8000/docs
+
+Retrain the model (optional):
 ```bash
-python3.13 -m venv venv313
+python ml/generate_data.py && python ml/train_model.py
 ```
 
-### Step 3: Activate the Virtual Environment
+Run the tests:
 ```bash
-source venv313/bin/activate
+pytest
 ```
-
-### Step 4: Install Dependencies
-We use a specific requirements file for Authentication to avoid conflicts with heavy ML libraries:
-```bash
-pip install -r requirements-auth.txt
-```
-
-### Step 5: Run the Server
-Start the server using `uvicorn`. Note that we are running `app.main_auth` specifically.
-```bash
-uvicorn app.main_auth:app --reload --host 0.0.0.0 --port 8000
-```
-
-> **Success:** You should see `Uvicorn running on http://0.0.0.0:8000`.
 
 ---
 
-## 2. Frontend Setup (`medyphas-ai---intelligence-hub`)
+## 2. Frontend (`medyphas-ai---intelligence-hub`)
 
-The frontend is built with React and Vite.
-
-### Step 1: Navigate to the frontend directory
-Open a **new terminal** window/tab and run:
+Open a new terminal:
 ```bash
-cd "medyphas-ai---intelligence-hub"
-```
-
-### Step 2: Install Dependencies
-```bash
+cd medyphas-ai---intelligence-hub
 npm install
-```
-
-### Step 3: Run the Development Server
-```bash
+cp .env.example .env                # VITE_API_URL=http://localhost:8000
 npm run dev
 ```
 
-> **Success:** You should see the app running at `http://localhost:3000`.
+App: http://localhost:3000
+
+No API keys go in the frontend. All AI calls go through the backend.
 
 ---
 
-## 3. Accessing the Application
+## 3. Demo accounts (created automatically on backend startup)
 
-- **Frontend URL**: [http://localhost:3000](http://localhost:3000)
-- **Backend API Docs**: [http://localhost:8000/docs](http://localhost:8000/docs)
+- Medical staff: `dr_strange` / `password123`
+- Patient:       `patient_demo` / `password123`
 
-### Default Credentials
-You can log in with:
-- **Username**: `dr_strange`
-- **Password**: `password123`
-
-Or create a new account via the **Sign Up** page.
+Or create a new account on the Sign Up page.
 
 ---
 
 ## Troubleshooting
 
-- **Port in use?**
-  If port 3000 or 8000 is taken, find the process and kill it:
-  `lsof -t -i:8000 | xargs kill -9`
-  
-- **Backend errors?**
-  Ensure you are using the `venv313` virtual environment and running `app.main_auth:app`.
+- Banner "Server offline": the backend isn't running or VITE_API_URL is wrong.
+- Banner "Waking up server": the hosted backend (Render free tier) is starting; wait up to a minute.
+- Port in use: macOS/Linux `lsof -t -i:8000 | xargs kill -9`;
+  Windows `netstat -ano | findstr :8000` then `taskkill /PID <pid> /F`.
+- CORS error in the browser: add the frontend URL to CORS_ORIGINS in triageai-backend/.env.

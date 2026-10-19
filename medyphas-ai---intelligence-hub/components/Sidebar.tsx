@@ -87,9 +87,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
             <>
               <NavItem to="/queue" icon="monitor_heart" label="Live Triage" badge="LIVE" />
               <NavItem to="/diagnostics" icon="psychology" label="AI Diagnostics" />
-              <NavItem to="/queue" icon="monitor_heart" label="Live Triage" badge="LIVE" />
-              <NavItem to="/diagnostics" icon="psychology" label="AI Diagnostics" />
-              <NavItem to="/analytics" icon="analytics" label="Analytics" />
               <NavItem to="/quick-fix" icon="medication" label="Quick Fix AI" badge="NEW" />
             </>
           )}
@@ -102,7 +99,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
           )}
 
           <p className="px-4 text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 mt-8 ml-1">System</p>
-          <NavItem to="/config" icon="settings" label="Configuration" />
+          <NavItem to="/config" icon="monitor_heart" label="System Status" />
         </nav>
 
         <div className="p-6 mt-auto">
