@@ -3,6 +3,7 @@
 Single entry point for everything (auth, triage, analytics, AI assistant):
     uvicorn app.main:app --reload
 """
+import sys
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -15,6 +16,11 @@ from app.services.gemini_service import gemini_service
 from app.services.seed import seed_all
 from app.api import triage, patients, stats, auth, websocket, quickfix, assistant
 from app.models.user import User  # noqa: F401  (registers the table with Base)
+
+# Windows consoles default to cp1252 and crash on the emoji in our startup logs.
+for _stream in (sys.stdout, sys.stderr):
+    if hasattr(_stream, "reconfigure"):
+        _stream.reconfigure(errors="replace")
 
 
 @asynccontextmanager
