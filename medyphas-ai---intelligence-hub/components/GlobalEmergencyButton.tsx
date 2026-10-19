@@ -1,7 +1,11 @@
 import React from 'react';
+import { useLocation } from 'react-router-dom';
 import { AMBULANCE_NUMBER, EMERGENCY_NUMBER, telLink } from '../services/emergency';
 
 export const GlobalEmergencyButton: React.FC = () => {
+    // The emergency page has its own always-visible call bar
+    if (useLocation().pathname === '/emergency') return null;
+
     return (
         <div className="fixed bottom-6 right-6 z-50 group">
             {/* Pulsing Effect */}

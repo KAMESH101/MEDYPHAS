@@ -14,6 +14,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { SymptomsReview } from './pages/SymptomsReview';
 import { QuickFix } from './pages/QuickFix';
 import { Report } from './pages/Report';
+import { Emergency } from './pages/Emergency';
 import { GlobalEmergencyButton } from './components/GlobalEmergencyButton';
 import { BackendStatusBanner } from './components/BackendStatusBanner';
 
@@ -39,6 +40,9 @@ const Header: React.FC<{ onMenuClick: () => void }> = ({ onMenuClick }) => {
           className="h-8 w-auto object-contain"
         />
       </div>
+      <a href="#/emergency" className="ml-auto mr-2 px-3 py-2 rounded-xl bg-red-600 text-white text-xs font-black flex items-center gap-1">
+        <span className="material-symbols-outlined text-[18px]">emergency</span> Emergency
+      </a>
       <button onClick={toggleTheme} className="p-2 rounded-xl text-slate-500 dark:text-slate-300">
         <span className="material-symbols-outlined dark:hidden">dark_mode</span>
         <span className="material-symbols-outlined hidden dark:inline">light_mode</span>
@@ -65,7 +69,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   };
 
   // If on login page, render full screen without sidebar layout
-  if (location.pathname === '/login' || location.pathname === '/signup') {
+  if (location.pathname === '/login' || location.pathname === '/signup' || location.pathname === '/emergency') {
     return <>{children}</>;
   }
 
@@ -92,13 +96,13 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             </h2>
           </div>
           <div className="flex items-center gap-6">
-            <div className="flex items-center gap-3 px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-xl shadow-inner text-slate-600 dark:text-slate-300">
-              <span className="flex h-2.5 w-2.5 relative">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]"></span>
-              </span>
-              <span className="text-xs font-bold uppercase tracking-wide">System Online</span>
-            </div>
+            <a
+              href="#/emergency"
+              className="px-5 py-3 rounded-2xl bg-red-600 hover:bg-red-700 text-white text-sm font-black shadow-lg flex items-center gap-2"
+            >
+              <span className="material-symbols-outlined text-[20px]">emergency</span>
+              Help someone in an emergency
+            </a>
             <button
               aria-label="Toggle Dark Mode"
               className="w-12 h-12 flex items-center justify-center rounded-2xl bg-white dark:bg-slate-700 text-slate-500 shadow-clay dark:shadow-clay-dark hover:scale-95 transition-transform active:scale-90"
@@ -152,6 +156,7 @@ export default function App() {
             <Route path="/my-health" element={<ProtectedRoute><MyHealth /></ProtectedRoute>} />
             <Route path="/quick-fix" element={<ProtectedRoute><QuickFix /></ProtectedRoute>} />
             <Route path="/report" element={<ProtectedRoute><Report /></ProtectedRoute>} />
+            <Route path="/emergency" element={<Emergency />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/config" element={<ProtectedRoute><Config /></ProtectedRoute>} />

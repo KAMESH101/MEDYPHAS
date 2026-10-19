@@ -176,8 +176,17 @@ export const Login: React.FC = () => {
 
 
 
-          <p className="text-center mt-8 text-xs font-medium text-slate-400">
-            Protected by Medyphas AI Security Protocol v2.5
+          <a
+            href="#/emergency"
+            className="mt-6 w-full py-5 bg-red-600 hover:bg-red-700 text-white rounded-2xl font-black text-lg shadow-lg shadow-red-500/30 flex items-center justify-center gap-2 transition-colors"
+          >
+            <span className="material-symbols-outlined">emergency</span>
+            Help someone in an emergency
+          </a>
+          <p className="text-center mt-2 text-xs font-medium text-slate-500">No login needed. You don't have to give your name.</p>
+
+          <p className="text-center mt-6 text-xs font-medium text-slate-400">
+            Prototype with demo data. Not a substitute for a doctor.
           </p>
 
         </div>
