@@ -8,7 +8,8 @@ np.random.seed(420)
 
 # Constants
 N_SAMPLES = 5000
-DATA_DIR = Path("ml/data")
+# Resolve relative to this file so the script works from any working directory
+DATA_DIR = Path(__file__).resolve().parent / "data"
 
 # Feature definitions
 SYMPTOMS = [

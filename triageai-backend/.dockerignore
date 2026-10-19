@@ -17,5 +17,5 @@ htmlcov/
 Dockerfile
 .dockerignore
 ml/data/*.csv
-ml/models/*.pkl
+*.log
 *.db

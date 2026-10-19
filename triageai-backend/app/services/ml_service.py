@@ -1,143 +1,141 @@
-"""Machine Learning model service with SHAP explainability."""
-import pickle
-import numpy as np
-import pandas as pd
-from typing import Dict, List, Tuple
+"""Machine Learning model service with per-patient feature contributions.
+
+The model is stored in XGBoost's native JSON format and the preprocessing (feature order,
+scaler parameters, class labels) as plain JSON, so nothing here depends on pickle or on a
+specific scikit-learn version. "Top factors" come from XGBoost's built-in tree contributions
+(pred_contribs=True, the TreeSHAP algorithm) instead of the much slower shap KernelExplainer.
+"""
+import json
 from pathlib import Path
-import shap
+from typing import List, Optional, Tuple
+
+import numpy as np
+import xgboost as xgb
+
 from app.config import settings
 from app.schemas.patient import PatientInput, TopFactor
 from app.utils.feature_engineering import build_features, get_feature_names
 
+MODEL_FILE = "xgb_model.json"
+META_FILE = "model_meta.json"
+
+_DISPLAY_NAMES = {
+    "spo2": "SpO2",
+    "bp_systolic": "Systolic BP",
+    "bp_diastolic": "Diastolic BP",
+    "heart_rate": "Heart Rate",
+    "temperature": "Temperature",
+    "age": "Age",
+    "symptom_count": "Number of Symptoms",
+    "condition_count": "Number of Conditions",
+}
+
+
+def display_name(feature: str) -> str:
+    """Human-readable label for a model feature."""
+    if feature in _DISPLAY_NAMES:
+        return _DISPLAY_NAMES[feature]
+    for prefix in ("symptom_", "condition_", "gender_"):
+        if feature.startswith(prefix):
+            feature = feature[len(prefix):]
+            break
+    return feature.replace("_", " ").title()
+
 
 class MLService:
     """ML model loader and prediction service."""
-    
+
     def __init__(self):
         """Initialize ML service (models loaded on startup)."""
-        self.model = None
-        self.scaler = None
-        self.encoder = None
-        self.explainer = None
+        self.booster: Optional[xgb.Booster] = None
+        self.classes: List[str] = []
+        self.mean: Optional[np.ndarray] = None
+        self.scale: Optional[np.ndarray] = None
         self.feature_names = get_feature_names()
-        
-    def load_models(self):
-        """Load trained XGBoost model, scaler, and encoder."""
-        model_dir = Path(settings.MODEL_DIR)
-        
+
+    def load_models(self, model_dir: Optional[Path] = None) -> bool:
+        """Load the trained XGBoost model and its preprocessing metadata."""
+        model_dir = Path(model_dir or settings.MODEL_DIR)
         try:
-            with open(model_dir / "xgb_model.pkl", "rb") as f:
-                self.model = pickle.load(f)
-            
-            with open(model_dir / "scaler.pkl", "rb") as f:
-                self.scaler = pickle.load(f)
-            
-            with open(model_dir / "encoder.pkl", "rb") as f:
-                self.encoder = pickle.load(f)
-            
-            # Initialize SHAP explainer (KernelExplainer for model-agnostic explanations)
-            # Use a small background dataset for efficiency
-            background_data = np.zeros((10, len(self.feature_names)))
-            self.explainer = shap.KernelExplainer(
-                self.model.predict_proba,
-                background_data
-            )
-            
+            with open(model_dir / META_FILE, encoding="utf-8") as f:
+                meta = json.load(f)
+
+            if meta["feature_names"] != self.feature_names:
+                raise ValueError("Feature order in model_meta.json does not match app/utils/feature_engineering.py")
+
+            booster = xgb.Booster()
+            booster.load_model(model_dir / MODEL_FILE)
+
+            self.classes = meta["classes"]
+            self.mean = np.asarray(meta["scaler"]["mean"], dtype=float)
+            self.scale = np.asarray(meta["scaler"]["scale"], dtype=float)
+            self.booster = booster
+
             print("✅ ML models loaded successfully")
             return True
-            
+
         except FileNotFoundError as e:
             print(f"⚠️  ML models not found: {e}")
-            print("   Run 'python ml/generate_data.py' and 'python ml/train_model.py' first")
-            return False
+            print("   Run 'python ml/generate_data.py && python ml/train_model.py' first. Triage will use rules only.")
         except Exception as e:
-            print(f"❌ Error loading ML models: {e}")
-            return False
-    
+            print(f"❌ Error loading ML models: {e}. Triage will use rules only.")
+        self.booster = None
+        return False
+
     def is_loaded(self) -> bool:
         """Check if models are loaded."""
-        return self.model is not None
-    
-    def predict_with_shap(
-        self, 
-        patient: PatientInput
-    ) -> Tuple[str, float, List[TopFactor]]:
+        return self.booster is not None
+
+    def _dmatrix(self, patient: PatientInput) -> xgb.DMatrix:
+        features = build_features(patient)[self.feature_names].to_numpy(dtype=float)
+        scaled = (features - self.mean) / self.scale
+        return xgb.DMatrix(scaled, feature_names=self.feature_names)
+
+    def predict(self, patient: PatientInput) -> Tuple[str, float, List[TopFactor]]:
         """
-        Make prediction with SHAP explanations.
-        
-        Args:
-            patient: Patient input data
-            
+        Predict risk level with the top contributing factors.
+
         Returns:
             Tuple of (risk_level, confidence, top_factors)
         """
         if not self.is_loaded():
             raise RuntimeError("ML models not loaded. Call load_models() first.")
-        
-        # Build features
-        features_df = build_features(patient)
-        
-        # Ensure correct column order
-        features_df = features_df[self.feature_names]
-        
-        # Scale features
-        features_scaled = self.scaler.transform(features_df)
-        
-        # Get predictions
-        probabilities = self.model.predict_proba(features_scaled)[0]
-        predicted_class_idx = np.argmax(probabilities)
-        predicted_class = int(predicted_class_idx) # Cast to Python int
-        confidence = float(probabilities[predicted_class])
-        
-        # Decode risk level
-        risk_level = self.encoder.inverse_transform([predicted_class])[0]
-        
-        top_factors = []
-        try:
-            # SHAP explanations
-            shap_values = self.explainer.shap_values(features_scaled)
-            
-            # For multi-class, shap_values is a list of arrays (one per class)
-            # Use the predicted class's SHAP values
-            if isinstance(shap_values, list):
-                shap_values_class = shap_values[predicted_class]
-            else:
-                shap_values_class = shap_values
-            
-            # Get top 3 contributing features
-            # shap_values_class shape is (1, n_features)
-            feature_importance = np.abs(shap_values_class[0])
-            top_indices = np.argsort(feature_importance)[-3:][::-1]
-            
-            for idx in top_indices:
-                feature_name = self.feature_names[idx]
-                contribution = float(shap_values_class[0][idx])
-                direction = "increases" if contribution > 0 else "decreases"
-                
-                # Format feature name for display
-                display_name = feature_name.replace("_", " ").title()
-                
-                top_factors.append(TopFactor(
-                    feature=display_name,
-                    contribution=abs(contribution),
-                    direction=direction
-                ))
-        except Exception as e:
-            print(f"⚠️ SHAP generation failed: {e}")
-            # Continue without SHAP factors rather than crashing
 
-            direction = "increases" if contribution > 0 else "decreases"
-            
-            # Format feature name for display
-            display_name = feature_name.replace("_", " ").title()
-            
-            top_factors.append(TopFactor(
-                feature=display_name,
-                contribution=abs(contribution),
-                direction=direction
-            ))
-        
-        return risk_level, confidence, top_factors
+        dmatrix = self._dmatrix(patient)
+
+        probabilities = self.booster.predict(dmatrix)[0]
+        predicted_class = int(np.argmax(probabilities))
+        confidence = float(probabilities[predicted_class])
+        risk_level = self.classes[predicted_class]
+
+        return risk_level, confidence, self._top_factors(dmatrix)
+
+    def _top_factors(self, dmatrix: xgb.DMatrix, k: int = 3) -> List[TopFactor]:
+        """
+        Top-k features by contribution towards the HIGH risk class, so "increases" always
+        means "pushes towards higher risk" whatever the predicted level is.
+        """
+        try:
+            # Shape for multi-class: (rows, classes, features + 1); the last column is the bias.
+            contribs = self.booster.predict(dmatrix, pred_contribs=True)
+            risk_class = self.classes.index("HIGH") if "HIGH" in self.classes else 0
+            class_contribs = np.asarray(contribs)[0, risk_class, :-1]
+
+            factors = []
+            for idx in np.argsort(np.abs(class_contribs))[::-1][:k]:
+                value = float(class_contribs[idx])
+                if value == 0.0:
+                    break
+                factors.append(TopFactor(
+                    feature=display_name(self.feature_names[idx]),
+                    contribution=round(abs(value), 4),
+                    direction="increases" if value > 0 else "decreases",
+                ))
+            return factors
+        except Exception as e:
+            # Explanations are optional; never fail the triage because of them.
+            print(f"⚠️ Feature contribution calculation failed: {e}")
+            return []
 
 
 # Global ML service instance

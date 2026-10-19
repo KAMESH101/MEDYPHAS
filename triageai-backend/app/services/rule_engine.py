@@ -142,3 +142,34 @@ def evaluate_rules(patient: PatientInput) -> RuleResult:
     
     # No rules triggered
     return RuleResult(triggered=False)
+
+
+def baseline_risk(patient: PatientInput) -> str:
+    """
+    Rules-only risk estimate used when no critical rule fired and the ML model is
+    unavailable. Mirrors the scoring used to label the synthetic training data, so it
+    errs on the side of caution (score >= 4 is HIGH).
+    """
+    score = 0
+    if patient.age > 65:
+        score += 2
+    elif patient.age > 50:
+        score += 1
+    if (patient.bp_systolic or 0) > 140 or (patient.bp_diastolic or 0) > 90:
+        score += 1
+    if patient.spo2 is not None and patient.spo2 < 94:
+        score += 1
+    if (patient.temperature or 0) > 38.5:
+        score += 1
+    if patient.heart_rate is not None and patient.heart_rate > 100:
+        score += 1
+    conditions = {c.lower().replace(" ", "_") for c in patient.pre_existing}
+    if "heart_disease" in conditions:
+        score += 2
+    if "diabetes" in conditions:
+        score += 1
+    if len(patient.symptoms) >= 3:
+        score += 1
+    if score >= 4:
+        return "HIGH"
+    return "MEDIUM" if score >= 2 else "LOW"

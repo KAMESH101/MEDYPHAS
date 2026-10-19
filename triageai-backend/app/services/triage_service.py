@@ -1,9 +1,9 @@
 """Main triage orchestration service."""
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.schemas.patient import PatientInput, TriageOutput, RiskLevelEnum
 from app.models.patient import Patient
-from app.services.rule_engine import evaluate_rules
+from app.services.rule_engine import evaluate_rules, baseline_risk
 from app.services.ml_service import ml_service
 from app.services.gemini_service import gemini_service
 
@@ -61,7 +61,8 @@ async def run_full_triage(
     
     Pipeline:
     1. Rule engine evaluation (immediate escalation if triggered)
-    2. ML model prediction with SHAP (if no rule triggered)
+    2. ML model prediction with feature contributions (if no rule triggered;
+       falls back to a rules-only baseline if the model is unavailable)
     3. Department assignment
     4. Gemini explanation generation
     5. Database persistence
@@ -82,12 +83,24 @@ async def run_full_triage(
         confidence = 1.0  # Rules have 100% confidence
         department = rule_result.department
         rule_name = rule_result.rule_name
-        top_factors = []  # Rules don't use SHAP
+        top_factors = []  # Rules don't use model contributions
     else:
-        # Step 2: ML prediction with SHAP
-        risk_level, confidence, top_factors = ml_service.predict_with_shap(patient_input)
         rule_name = None
-        
+        risk_level = None
+
+        # Step 2: ML prediction with feature contributions
+        if ml_service.is_loaded():
+            try:
+                risk_level, confidence, top_factors = ml_service.predict(patient_input)
+            except Exception as e:
+                print(f"⚠️ ML prediction failed, using rules-only baseline: {e}")
+
+        # Fallback: model missing or failed -> simple rules-only baseline
+        if risk_level is None:
+            risk_level = baseline_risk(patient_input)
+            confidence = 0.5
+            top_factors = []
+
         # Step 3: Assign department
         department = assign_department(risk_level, patient_input.symptoms)
     
@@ -115,7 +128,7 @@ async def run_full_triage(
         confidence=confidence,
         department=department,
         rule_triggered=rule_name,
-        shap_factors=[factor.dict() for factor in top_factors] if top_factors else None,
+        shap_factors=[factor.model_dump() for factor in top_factors] if top_factors else None,
         explanation=explanation
     )
     
@@ -132,5 +145,5 @@ async def run_full_triage(
         rule_triggered=rule_name,
         top_factors=top_factors,
         explanation=explanation,
-        triage_timestamp=patient_record.created_at or datetime.utcnow()
+        triage_timestamp=patient_record.created_at or datetime.now(timezone.utc)
     )
