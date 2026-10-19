@@ -1,11 +1,18 @@
 """Main triage orchestration service."""
 from datetime import datetime, timezone
+from typing import List, Optional
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.schemas.patient import PatientInput, TriageOutput, RiskLevelEnum
+from app.schemas.patient import PatientInput, TriageOutput, RiskLevelEnum, TopFactor
+from app.schemas.report import LabValue
 from app.models.patient import Patient
 from app.services.rule_engine import evaluate_rules, baseline_risk
+from app.services.lab_rules import LabAlert, evaluate_lab_values
 from app.services.ml_service import ml_service
 from app.services.gemini_service import gemini_service
+
+RISK_ORDER = {"LOW": 0, "MEDIUM": 1, "HIGH": 2}
+TRAUMA_KEYWORDS = ("bleeding", "injury", "injured", "accident", "fracture", "burn", "can't move", "cannot move", "fall")
 
 
 def assign_department(risk_level: str, symptoms: list, rule_name: str = None) -> str:
@@ -15,25 +22,22 @@ def assign_department(risk_level: str, symptoms: list, rule_name: str = None) ->
     Args:
         risk_level: HIGH, MEDIUM, or LOW
         symptoms: List of patient symptoms
-        rule_name: Clinical rule name if triggered
+        rule_name: Unused, kept for backwards compatibility
         
     Returns:
         Department name
     """
-    # If rule already assigned department, use it
-    if rule_name:
-        # Rule engine already provides department in most cases
-        return "Emergency"  # Fallback
-    
     symptoms_lower = [s.lower() for s in symptoms]
     
     # High risk general emergency
     if risk_level == "HIGH":
-        if any("chest" in s or "heart" in s for s in symptoms_lower):
+        if any(k in s for s in symptoms_lower for k in TRAUMA_KEYWORDS):
+            return "Trauma / Emergency"
+        elif any("chest" in s or "heart" in s for s in symptoms_lower):
             return "Cardiology / Emergency"
         elif any("breath" in s for s in symptoms_lower):
             return "Respiratory / Emergency"
-        elif any("head" in s or "confusion" in s for s in symptoms_lower):
+        elif any(k in s for s in symptoms_lower for k in ("head", "confusion", "seizure", "unconscious", "stroke", "speech")):
             return "Neurology / Emergency"
         else:
             return "Emergency"
@@ -52,68 +56,95 @@ def assign_department(risk_level: str, symptoms: list, rule_name: str = None) ->
         return "Outpatient / General Practice"
 
 
+
+
+class RiskDecision(BaseModel):
+    """Final urgency decision and where it came from."""
+
+    risk_level: str
+    confidence: float
+    department: str
+    rule_triggered: Optional[str] = None
+    top_factors: List[TopFactor] = []
+    lab_alerts: List[LabAlert] = []
+    model_risk_level: Optional[str] = None  # what ML (or the rules-only baseline) said on its own
+
+
+def decide_risk(patient_input: PatientInput, lab_values: Optional[List[LabValue]] = None) -> RiskDecision:
+    """
+    Combine clinical rules, lab danger rules and the ML model into one urgency level.
+
+    Safety contract:
+    - Any clinical rule or critical lab value makes the result HIGH (Red).
+    - Out-of-range lab values make it at least MEDIUM (Yellow).
+    - The ML model can only RAISE urgency: the final level is the maximum of all sources,
+      so ML can never downgrade a rule-based Red.
+    - If the ML model is missing or fails, a rules-only baseline is used instead.
+    """
+    rule_result = evaluate_rules(patient_input)
+    lab_alerts = evaluate_lab_values(lab_values or [])
+
+    # ML runs even when a rule fired, so its factors can still be shown.
+    model_risk, model_confidence, top_factors = None, 0.5, []
+    if ml_service.is_loaded():
+        try:
+            model_risk, model_confidence, top_factors = ml_service.predict(patient_input)
+        except Exception as e:
+            print(f"⚠️ ML prediction failed, using rules-only baseline: {e}")
+    if model_risk is None:
+        model_risk = baseline_risk(patient_input)
+
+    critical_lab = next((a for a in lab_alerts if a.level == "HIGH"), None)
+
+    if rule_result.triggered:
+        return RiskDecision(
+            risk_level="HIGH", confidence=1.0, department=rule_result.department,
+            rule_triggered=rule_result.rule_name, top_factors=top_factors,
+            lab_alerts=lab_alerts, model_risk_level=model_risk,
+        )
+
+    if critical_lab:
+        return RiskDecision(
+            risk_level="HIGH", confidence=1.0, department=critical_lab.department,
+            rule_triggered=critical_lab.rule_name, top_factors=top_factors,
+            lab_alerts=lab_alerts, model_risk_level=model_risk,
+        )
+
+    risk_level, confidence, rule_name = model_risk, model_confidence, None
+    if lab_alerts and RISK_ORDER["MEDIUM"] > RISK_ORDER[risk_level]:
+        risk_level, confidence, rule_name = "MEDIUM", 1.0, lab_alerts[0].rule_name
+
+    return RiskDecision(
+        risk_level=risk_level, confidence=confidence,
+        department=assign_department(risk_level, patient_input.symptoms),
+        rule_triggered=rule_name, top_factors=top_factors,
+        lab_alerts=lab_alerts, model_risk_level=model_risk,
+    )
+
+
 async def run_full_triage(
     patient_input: PatientInput,
-    db: AsyncSession
+    db: AsyncSession,
+    lab_values: Optional[List[LabValue]] = None,
 ) -> TriageOutput:
     """
     Execute complete triage pipeline.
     
     Pipeline:
-    1. Rule engine evaluation (immediate escalation if triggered)
-    2. ML model prediction with feature contributions (if no rule triggered;
-       falls back to a rules-only baseline if the model is unavailable)
-    3. Department assignment
-    4. Gemini explanation generation
-    5. Database persistence
-    
-    Args:
-        patient_input: Validated patient data
-        db: Database session
-        
-    Returns:
-        Complete triage output
+    1. Urgency decision: clinical rules + lab danger rules + ML (see decide_risk)
+    2. Explanation generation (Gemini, or fallback text)
+    3. Database persistence
     """
-    # Step 1: Check clinical rules
-    rule_result = evaluate_rules(patient_input)
-    
-    if rule_result.triggered:
-        # Rule overrides ML prediction
-        risk_level = rule_result.risk_level
-        confidence = 1.0  # Rules have 100% confidence
-        department = rule_result.department
-        rule_name = rule_result.rule_name
-        top_factors = []  # Rules don't use model contributions
-    else:
-        rule_name = None
-        risk_level = None
+    decision = decide_risk(patient_input, lab_values)
 
-        # Step 2: ML prediction with feature contributions
-        if ml_service.is_loaded():
-            try:
-                risk_level, confidence, top_factors = ml_service.predict(patient_input)
-            except Exception as e:
-                print(f"⚠️ ML prediction failed, using rules-only baseline: {e}")
-
-        # Fallback: model missing or failed -> simple rules-only baseline
-        if risk_level is None:
-            risk_level = baseline_risk(patient_input)
-            confidence = 0.5
-            top_factors = []
-
-        # Step 3: Assign department
-        department = assign_department(risk_level, patient_input.symptoms)
-    
-    # Step 4: Generate explanation
     explanation = await gemini_service.generate_explanation(
         patient=patient_input,
-        risk_level=risk_level,
-        department=department,
-        top_factors=top_factors,
-        rule_triggered=rule_name
+        risk_level=decision.risk_level,
+        department=decision.department,
+        top_factors=decision.top_factors,
+        rule_triggered=decision.rule_triggered
     )
     
-    # Step 5: Save to database
     patient_record = Patient(
         age=patient_input.age,
         gender=patient_input.gender.value,
@@ -124,11 +155,11 @@ async def run_full_triage(
         spo2=patient_input.spo2,
         symptoms=patient_input.symptoms,
         pre_existing=patient_input.pre_existing,
-        risk_level=risk_level,
-        confidence=confidence,
-        department=department,
-        rule_triggered=rule_name,
-        shap_factors=[factor.model_dump() for factor in top_factors] if top_factors else None,
+        risk_level=decision.risk_level,
+        confidence=decision.confidence,
+        department=decision.department,
+        rule_triggered=decision.rule_triggered,
+        shap_factors=[factor.model_dump() for factor in decision.top_factors] or None,
         explanation=explanation
     )
     
@@ -136,14 +167,14 @@ async def run_full_triage(
     await db.commit()
     await db.refresh(patient_record)
     
-    # Build output
     return TriageOutput(
         patient_id=patient_record.id,
-        risk_level=RiskLevelEnum(risk_level),
-        confidence=confidence,
-        department=department,
-        rule_triggered=rule_name,
-        top_factors=top_factors,
+        risk_level=RiskLevelEnum(decision.risk_level),
+        confidence=decision.confidence,
+        department=decision.department,
+        rule_triggered=decision.rule_triggered,
+        top_factors=decision.top_factors,
+        lab_alerts=[a.model_dump() for a in decision.lab_alerts],
         explanation=explanation,
         triage_timestamp=patient_record.created_at or datetime.now(timezone.utc)
     )

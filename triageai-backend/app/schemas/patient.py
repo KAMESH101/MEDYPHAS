@@ -68,6 +68,7 @@ class TriageOutput(BaseModel):
     department: str
     rule_triggered: Optional[str] = None
     top_factors: List[TopFactor] = Field(default_factory=list)
+    lab_alerts: List[dict] = Field(default_factory=list)
     explanation: str
     triage_timestamp: datetime
 
