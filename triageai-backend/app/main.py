@@ -14,8 +14,9 @@ from app.database import init_db
 from app.services.ml_service import ml_service
 from app.services.gemini_service import gemini_service
 from app.services.seed import seed_all
-from app.api import triage, patients, stats, auth, websocket, quickfix, assistant
+from app.api import triage, patients, stats, auth, websocket, quickfix, assistant, hospitals
 from app.models.user import User  # noqa: F401  (registers the table with Base)
+from app.models.hospital import Hospital  # noqa: F401
 
 # Windows consoles default to cp1252 and crash on the emoji in our startup logs.
 for _stream in (sys.stdout, sys.stderr):
@@ -72,6 +73,7 @@ app.include_router(patients.router)
 app.include_router(stats.router)
 app.include_router(quickfix.router)
 app.include_router(assistant.router)
+app.include_router(hospitals.router)
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(websocket.router)
 

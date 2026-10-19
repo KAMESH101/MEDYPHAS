@@ -1,0 +1,271 @@
+{
+  "_notice": "DEMO DATA. Fictional hospitals placed at real Chennai / Tamil Nadu area coordinates. Names, bed counts and phone numbers are made up for the Dexathon 2026 prototype. Do not use for real emergencies: call 108.",
+  "hospitals": [
+    {
+      "id": "egmore-govt",
+      "name": "Egmore General Hospital (Demo)",
+      "area": "Egmore, Chennai",
+      "lat": 13.0732,
+      "lng": 80.2609,
+      "specialties": [
+        "Emergency",
+        "Trauma",
+        "General Medicine",
+        "Internal Medicine",
+        "Pediatrics",
+        "Obstetrics"
+      ],
+      "beds_available": 24,
+      "has_trauma_care": true,
+      "phone": "+91-00000-00001"
+    },
+    {
+      "id": "park-town-medical",
+      "name": "Park Town Medical College Hospital (Demo)",
+      "area": "Park Town, Chennai",
+      "lat": 13.082,
+      "lng": 80.275,
+      "specialties": [
+        "Emergency",
+        "Trauma",
+        "Cardiology",
+        "Neurology",
+        "Respiratory",
+        "Internal Medicine",
+        "Nephrology",
+        "Orthopedics"
+      ],
+      "beds_available": 40,
+      "has_trauma_care": true,
+      "phone": "+91-00000-00002"
+    },
+    {
+      "id": "guindy-cardiac",
+      "name": "Guindy Heart & Vascular Centre (Demo)",
+      "area": "Guindy, Chennai",
+      "lat": 13.0067,
+      "lng": 80.2206,
+      "specialties": [
+        "Emergency",
+        "Cardiology",
+        "Internal Medicine"
+      ],
+      "beds_available": 8,
+      "has_trauma_care": false,
+      "phone": "+91-00000-00003"
+    },
+    {
+      "id": "adyar-neuro",
+      "name": "Adyar Neuro & Stroke Institute (Demo)",
+      "area": "Adyar, Chennai",
+      "lat": 13.0012,
+      "lng": 80.2565,
+      "specialties": [
+        "Emergency",
+        "Neurology",
+        "Internal Medicine"
+      ],
+      "beds_available": 6,
+      "has_trauma_care": false,
+      "phone": "+91-00000-00004"
+    },
+    {
+      "id": "tnagar-multi",
+      "name": "T. Nagar Multispeciality Hospital (Demo)",
+      "area": "T. Nagar, Chennai",
+      "lat": 13.0418,
+      "lng": 80.2341,
+      "specialties": [
+        "Emergency",
+        "Cardiology",
+        "Gastroenterology",
+        "General Medicine",
+        "Orthopedics",
+        "Endocrinology"
+      ],
+      "beds_available": 12,
+      "has_trauma_care": false,
+      "phone": "+91-00000-00005"
+    },
+    {
+      "id": "annanagar-trauma",
+      "name": "Anna Nagar Trauma & Ortho Centre (Demo)",
+      "area": "Anna Nagar, Chennai",
+      "lat": 13.085,
+      "lng": 80.2101,
+      "specialties": [
+        "Emergency",
+        "Trauma",
+        "Orthopedics",
+        "Neurology"
+      ],
+      "beds_available": 10,
+      "has_trauma_care": true,
+      "phone": "+91-00000-00006"
+    },
+    {
+      "id": "velachery-general",
+      "name": "Velachery Community Hospital (Demo)",
+      "area": "Velachery, Chennai",
+      "lat": 12.9815,
+      "lng": 80.218,
+      "specialties": [
+        "General Medicine",
+        "Pediatrics",
+        "Obstetrics"
+      ],
+      "beds_available": 15,
+      "has_trauma_care": false,
+      "phone": "+91-00000-00007"
+    },
+    {
+      "id": "tambaram-chest",
+      "name": "Tambaram Chest & Respiratory Hospital (Demo)",
+      "area": "Tambaram, Chennai",
+      "lat": 12.9249,
+      "lng": 80.1,
+      "specialties": [
+        "Emergency",
+        "Respiratory",
+        "Internal Medicine"
+      ],
+      "beds_available": 18,
+      "has_trauma_care": false,
+      "phone": "+91-00000-00008"
+    },
+    {
+      "id": "porur-university",
+      "name": "Porur University Hospital (Demo)",
+      "area": "Porur, Chennai",
+      "lat": 13.0382,
+      "lng": 80.1565,
+      "specialties": [
+        "Emergency",
+        "Trauma",
+        "Cardiology",
+        "Neurology",
+        "Respiratory",
+        "Nephrology",
+        "Gastroenterology",
+        "Endocrinology",
+        "Internal Medicine"
+      ],
+      "beds_available": 30,
+      "has_trauma_care": true,
+      "phone": "+91-00000-00009"
+    },
+    {
+      "id": "royapettah-govt",
+      "name": "Royapettah Government Hospital (Demo)",
+      "area": "Royapettah, Chennai",
+      "lat": 13.054,
+      "lng": 80.264,
+      "specialties": [
+        "Emergency",
+        "Trauma",
+        "General Medicine",
+        "Orthopedics"
+      ],
+      "beds_available": 0,
+      "has_trauma_care": true,
+      "phone": "+91-00000-00010"
+    },
+    {
+      "id": "perambur-railway",
+      "name": "Perambur District Hospital (Demo)",
+      "area": "Perambur, Chennai",
+      "lat": 13.121,
+      "lng": 80.233,
+      "specialties": [
+        "Emergency",
+        "General Medicine",
+        "Internal Medicine",
+        "Pediatrics"
+      ],
+      "beds_available": 9,
+      "has_trauma_care": false,
+      "phone": "+91-00000-00011"
+    },
+    {
+      "id": "kilpauk-kidney",
+      "name": "Kilpauk Kidney & Diabetes Centre (Demo)",
+      "area": "Kilpauk, Chennai",
+      "lat": 13.0827,
+      "lng": 80.242,
+      "specialties": [
+        "Nephrology",
+        "Endocrinology",
+        "Internal Medicine"
+      ],
+      "beds_available": 7,
+      "has_trauma_care": false,
+      "phone": "+91-00000-00012"
+    },
+    {
+      "id": "omr-emergency",
+      "name": "OMR Emergency & Critical Care (Demo)",
+      "area": "Sholinganallur, Chennai",
+      "lat": 12.901,
+      "lng": 80.2279,
+      "specialties": [
+        "Emergency",
+        "Trauma",
+        "Cardiology",
+        "Respiratory"
+      ],
+      "beds_available": 5,
+      "has_trauma_care": true,
+      "phone": "+91-00000-00013"
+    },
+    {
+      "id": "chengalpattu-medical",
+      "name": "Chengalpattu Medical College Hospital (Demo)",
+      "area": "Chengalpattu",
+      "lat": 12.6921,
+      "lng": 79.9707,
+      "specialties": [
+        "Emergency",
+        "Trauma",
+        "General Medicine",
+        "Obstetrics",
+        "Pediatrics"
+      ],
+      "beds_available": 35,
+      "has_trauma_care": true,
+      "phone": "+91-00000-00014"
+    },
+    {
+      "id": "vellore-teaching",
+      "name": "Vellore Teaching Hospital (Demo)",
+      "area": "Vellore",
+      "lat": 12.9165,
+      "lng": 79.1325,
+      "specialties": [
+        "Emergency",
+        "Trauma",
+        "Cardiology",
+        "Neurology",
+        "Nephrology",
+        "Internal Medicine"
+      ],
+      "beds_available": 45,
+      "has_trauma_care": true,
+      "phone": "+91-00000-00015"
+    },
+    {
+      "id": "kanchipuram-district",
+      "name": "Kanchipuram District Hospital (Demo)",
+      "area": "Kanchipuram",
+      "lat": 12.8342,
+      "lng": 79.7036,
+      "specialties": [
+        "Emergency",
+        "General Medicine",
+        "Orthopedics"
+      ],
+      "beds_available": 14,
+      "has_trauma_care": false,
+      "phone": "+91-00000-00016"
+    }
+  ]
+}
