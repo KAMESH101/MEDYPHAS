@@ -82,6 +82,24 @@ const PatientDashboard: React.FC<{ user: any, appointments: Appointment[], onRef
         <div className="absolute right-0 bottom-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-16 -mb-16 pointer-events-none"></div>
       </div>
 
+      {/* Main patient flow */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <a href="#/report" className="group p-6 rounded-clay bg-white dark:bg-slate-800 shadow-clay dark:shadow-clay-dark border border-white/50 dark:border-slate-700 hover:-translate-y-1 transition-transform flex items-center gap-4">
+          <span className="material-symbols-outlined text-4xl text-indigo-500">description</span>
+          <div>
+            <p className="font-black text-lg text-slate-800 dark:text-white">Understand my report</p>
+            <p className="text-sm text-slate-500">Upload a prescription or lab report. Explained in English, Tamil or Hindi.</p>
+          </div>
+        </a>
+        <a href="#/emergency" className="group p-6 rounded-clay bg-red-600 text-white shadow-lg hover:-translate-y-1 transition-transform flex items-center gap-4">
+          <span className="material-symbols-outlined text-4xl">emergency</span>
+          <div>
+            <p className="font-black text-lg">Help someone in an emergency</p>
+            <p className="text-sm text-red-100">No login needed. Nearest hospital and Call 108.</p>
+          </div>
+        </a>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Book Appointment */}
         <div className="bg-surface-light dark:bg-surface-dark p-8 rounded-clay shadow-clay dark:shadow-clay-dark border border-white/50 dark:border-slate-700">

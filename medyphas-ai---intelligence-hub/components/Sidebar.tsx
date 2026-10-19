@@ -93,6 +93,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
 
           {user?.role === 'PATIENT' && (
             <>
+              <NavItem to="/report" icon="description" label="Understand My Report" badge="NEW" />
               <NavItem to="/my-health" icon="vital_signs" label="My Health" />
               <NavItem to="/quick-fix" icon="stethoscope" label="Which Doctor?" />
             </>

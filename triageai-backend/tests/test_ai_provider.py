@@ -134,6 +134,7 @@ async def test_upload_report_end_to_end(client: AsyncClient, gemini_reads_doc):
     assert [m['name'] for m in data['medicines']] == ['Metformin']
     assert [m['name'] for m in data['report_explanation']['medicines']] == ['Metformin']
     assert data['language'] == 'ta'
+    assert data['patient']['age'] == 58
     assert data['explanation_source'] == 'rules'
     assert '108' in data['disclaimer']
     assert 'Emergency' in data['department']

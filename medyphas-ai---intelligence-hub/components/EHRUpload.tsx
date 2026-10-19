@@ -1,15 +1,41 @@
 import React, { useState } from 'react';
+import { HealthFormData } from '../types';
+import { api, ReportAnalysis, ReportLanguage } from '../services/api';
 
 interface EHRUploadProps {
-    onUploadSuccess?: (data: any) => void;
-    onSkip: () => void;
+    /** Prefill mode: receives the age / vitals / symptoms read from the document. */
+    onUploadSuccess?: (data: Partial<HealthFormData>) => void;
+    /** Patient mode: receives the full analysis (medicines, lab values, urgency, explanation). */
+    onAnalyzed?: (analysis: ReportAnalysis) => void;
+    onSkip?: () => void;
     isPatientView?: boolean;
+    language?: ReportLanguage;
 }
+
+const VALID_TYPES = ['application/pdf', 'image/png', 'image/jpeg'];
+const MAX_MB = 10;
+
+/** Backend PatientInput (snake_case) -> form data. Missing values stay undefined (never invented). */
+const toFormData = (p: any): Partial<HealthFormData> => ({
+    age: p?.age,
+    gender: p?.gender === 'M' ? 'Male' : p?.gender === 'F' ? 'Female' : 'Other',
+    vitals: {
+        bpSystolic: p?.bp_systolic ?? undefined,
+        bpDiastolic: p?.bp_diastolic ?? undefined,
+        heartRate: p?.heart_rate ?? undefined,
+        temp: p?.temperature ?? undefined,
+        spo2: p?.spo2 ?? undefined,
+    } as HealthFormData['vitals'],
+    symptoms: (p?.symptoms || []).filter((s: string) => s !== 'no symptoms reported'),
+    preExistingConditions: p?.pre_existing || [],
+});
 
 export const EHRUpload: React.FC<EHRUploadProps> = ({
     onUploadSuccess,
+    onAnalyzed,
     onSkip,
     isPatientView = false,
+    language = 'en' as ReportLanguage,
 }) => {
     const [isDragging, setIsDragging] = useState(false);
     const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -43,16 +69,12 @@ export const EHRUpload: React.FC<EHRUploadProps> = ({
     };
 
     const handleFile = (file: File) => {
-        // Validate file type
-        const validTypes = ['application/pdf', 'application/json', 'text/plain', 'application/xml'];
-        if (!validTypes.includes(file.type) && !file.name.endsWith('.hl7')) {
-            setError('Invalid file type. Please upload PDF, JSON, HL7, or XML files.');
+        if (!VALID_TYPES.includes(file.type)) {
+            setError('Invalid file type. Please upload a PDF, PNG or JPG (a photo of the prescription or report works).');
             return;
         }
-
-        // Validate file size (max 10MB)
-        if (file.size > 10 * 1024 * 1024) {
-            setError('File too large. Maximum size is 10MB.');
+        if (file.size > MAX_MB * 1024 * 1024) {
+            setError(`File too large. Maximum size is ${MAX_MB} MB.`);
             return;
         }
 
@@ -67,34 +89,11 @@ export const EHRUpload: React.FC<EHRUploadProps> = ({
         setError(null);
 
         try {
-            // Simulate file processing
-            await new Promise(resolve => setTimeout(resolve, 2000));
-
-            // In a real implementation, you would:
-            // 1. Upload the file to a server
-            // 2. Parse the EHR data
-            // 3. Extract patient information
-            // 4. Return structured data
-
-            const mockData = {
-                age: 35,
-                gender: 'Female' as const,
-                vitals: {
-                    bpSystolic: 125,
-                    bpDiastolic: 82,
-                    heartRate: 72,
-                    temp: 36.8,
-                    spo2: 98,
-                },
-                symptoms: ['Headache'],
-                preExistingConditions: ['Diabetes'],
-            };
-
-            if (onUploadSuccess) {
-                onUploadSuccess(mockData);
-            }
-        } catch (err) {
-            setError('Failed to process EHR file. Please try again or enter details manually.');
+            const analysis = await api.analyzeReport(uploadedFile, language);
+            onAnalyzed?.(analysis);
+            onUploadSuccess?.(toFormData(analysis.patient));
+        } catch (err: any) {
+            setError(err?.message || 'Failed to read the document. Please try again or enter details manually.');
         } finally {
             setUploading(false);
         }
@@ -107,12 +106,12 @@ export const EHRUpload: React.FC<EHRUploadProps> = ({
                     <span className="material-symbols-outlined text-4xl">upload_file</span>
                 </div>
                 <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-2">
-                    Upload Electronic Health Record
+                    {isPatientView ? 'Upload a prescription or lab report' : 'Upload Electronic Health Record'}
                 </h2>
                 <p className="text-slate-500 dark:text-slate-400 font-medium">
                     {isPatientView
-                        ? 'Upload your EHR to quickly populate your health information'
-                        : 'Upload patient\'s EHR for faster assessment'}
+                        ? 'A clear photo or PDF. We read it and explain it in simple words.'
+                        : 'Upload the patient\'s record for faster assessment'}
                 </p>
             </div>
 
@@ -130,7 +129,7 @@ export const EHRUpload: React.FC<EHRUploadProps> = ({
                     type="file"
                     id="ehr-upload"
                     className="hidden"
-                    accept=".pdf,.json,.hl7,.xml"
+                    accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"
                     onChange={handleFileInput}
                 />
 
@@ -149,7 +148,7 @@ export const EHRUpload: React.FC<EHRUploadProps> = ({
                                 Click to upload or drag and drop
                             </p>
                             <p className="text-sm text-slate-500 dark:text-slate-400">
-                                PDF, JSON, HL7, or XML (max 10MB)
+                                PDF, PNG or JPG (max {MAX_MB} MB)
                             </p>
                         </div>
                     </label>
@@ -173,6 +172,7 @@ export const EHRUpload: React.FC<EHRUploadProps> = ({
                         <button
                             onClick={() => setUploadedFile(null)}
                             className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors"
+                            aria-label="Remove file"
                         >
                             <span className="material-symbols-outlined text-slate-500">close</span>
                         </button>
@@ -190,13 +190,15 @@ export const EHRUpload: React.FC<EHRUploadProps> = ({
 
             {/* Action Buttons */}
             <div className="mt-8 flex flex-col sm:flex-row gap-4">
-                <button
-                    onClick={onSkip}
-                    className="flex-1 px-6 py-4 rounded-xl font-bold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all flex items-center justify-center gap-2"
-                >
-                    <span className="material-symbols-outlined">edit</span>
-                    Skip & Enter Manually
-                </button>
+                {onSkip && (
+                    <button
+                        onClick={onSkip}
+                        className="flex-1 px-6 py-4 rounded-xl font-bold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all flex items-center justify-center gap-2"
+                    >
+                        <span className="material-symbols-outlined">edit</span>
+                        Skip & Enter Manually
+                    </button>
+                )}
                 <button
                     onClick={handleUpload}
                     disabled={!uploadedFile || uploading}
@@ -205,34 +207,27 @@ export const EHRUpload: React.FC<EHRUploadProps> = ({
                     {uploading ? (
                         <>
                             <span className="material-symbols-outlined animate-spin">progress_activity</span>
-                            Processing...
+                            Reading document...
                         </>
                     ) : (
                         <>
                             <span className="material-symbols-outlined">check_circle</span>
-                            Process EHR
+                            {isPatientView ? 'Read & Explain' : 'Process Record'}
                         </>
                     )}
                 </button>
             </div>
 
-            {/* Supported Formats Info */}
-            <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/10 rounded-xl border border-blue-100 dark:border-blue-800/30">
+            {/* Privacy note */}
+            <div className="mt-6 p-4 bg-amber-50 dark:bg-amber-900/10 rounded-xl border border-amber-100 dark:border-amber-800/30">
                 <div className="flex items-start gap-3">
-                    <span className="material-symbols-outlined text-blue-600 dark:text-blue-400 text-xl">
-                        info
+                    <span className="material-symbols-outlined text-amber-600 dark:text-amber-400 text-xl">
+                        privacy_tip
                     </span>
-                    <div className="text-sm">
-                        <p className="font-semibold text-blue-900 dark:text-blue-200 mb-1">
-                            Supported EHR Formats
-                        </p>
-                        <ul className="text-blue-700 dark:text-blue-300 space-y-1">
-                            <li>• HL7 FHIR (JSON/XML)</li>
-                            <li>• C-CDA (XML)</li>
-                            <li>• PDF Health Records</li>
-                            <li>• Custom JSON Format</li>
-                        </ul>
-                    </div>
+                    <p className="text-sm text-amber-800 dark:text-amber-200">
+                        Prototype: documents are read by a free-tier AI service that may use submitted data.
+                        Please upload <strong>sample documents only</strong>, not real patient records.
+                    </p>
                 </div>
             </div>
         </div>

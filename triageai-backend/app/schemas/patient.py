@@ -77,6 +77,7 @@ class ReportAnalysis(TriageOutput):
     """Patient mode: triage result plus what was read from the document and a plain-language explanation."""
 
     document_type: str
+    patient: dict = Field(default_factory=dict, description="Age, gender, vitals, symptoms read from the document")
     medicines: List[dict] = Field(default_factory=list)
     lab_values: List[dict] = Field(default_factory=list)
     language: str

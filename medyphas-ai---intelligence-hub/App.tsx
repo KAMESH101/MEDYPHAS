@@ -13,6 +13,7 @@ import { MyHealth } from './pages/MyHealth';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SymptomsReview } from './pages/SymptomsReview';
 import { QuickFix } from './pages/QuickFix';
+import { Report } from './pages/Report';
 import { GlobalEmergencyButton } from './components/GlobalEmergencyButton';
 import { BackendStatusBanner } from './components/BackendStatusBanner';
 
@@ -82,7 +83,9 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                   location.pathname === '/config' ? 'System Status' :
                     location.pathname === '/diagnostics' ? 'Diagnostics' :
                       location.pathname === '/triage' ? 'Assessment' :
-                        location.pathname === '/my-health' ? 'My Health' : 'System View'}
+                        location.pathname === '/my-health' ? 'My Health' :
+                          location.pathname === '/report' ? 'My Report' :
+                            location.pathname === '/quick-fix' ? 'Which Doctor?' : 'System View'}
               <span className="text-slate-400 dark:text-slate-500 font-medium text-base bg-slate-200/50 dark:bg-slate-700/50 px-3 py-1 rounded-lg">
                 {user?.role === 'ADMIN' || user?.role === 'DOCTOR' ? 'Medical Staff' : 'Patient View'}
               </span>
@@ -148,6 +151,7 @@ export default function App() {
             <Route path="/queue" element={<ProtectedRoute><PatientQueue /></ProtectedRoute>} />
             <Route path="/my-health" element={<ProtectedRoute><MyHealth /></ProtectedRoute>} />
             <Route path="/quick-fix" element={<ProtectedRoute><QuickFix /></ProtectedRoute>} />
+            <Route path="/report" element={<ProtectedRoute><Report /></ProtectedRoute>} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/config" element={<ProtectedRoute><Config /></ProtectedRoute>} />

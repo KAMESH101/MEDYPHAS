@@ -80,7 +80,8 @@ async def triage_from_document(
         )
 
     try:
-        triage = await run_full_triage(to_patient_input(doc), db, lab_values=doc.lab_values)
+        patient = to_patient_input(doc)
+        triage = await run_full_triage(patient, db, lab_values=doc.lab_values)
         alerts = evaluate_lab_values(doc.lab_values)
         explanation, source = await ai_provider.explain_report(
             doc, triage.risk_level.value, alerts, language, content_hash=file_hash(content)
@@ -91,6 +92,7 @@ async def triage_from_document(
     return ReportAnalysis(
         **triage.model_dump(),
         document_type=doc.document_type,
+        patient=patient.model_dump(mode="json"),
         medicines=[m.model_dump() for m in doc.medicines],
         lab_values=[lab.model_dump() for lab in doc.lab_values],
         language=language,
