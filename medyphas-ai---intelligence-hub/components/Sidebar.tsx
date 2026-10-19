@@ -87,6 +87,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
             <>
               <NavItem to="/queue" icon="monitor_heart" label="Live Triage" badge="LIVE" />
               <NavItem to="/diagnostics" icon="psychology" label="AI Diagnostics" />
+              <NavItem to="/hospital-admin" icon="bed" label="Hospital Beds" />
               <NavItem to="/quick-fix" icon="stethoscope" label="Which Doctor?" />
             </>
           )}

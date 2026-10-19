@@ -15,6 +15,7 @@ import { SymptomsReview } from './pages/SymptomsReview';
 import { QuickFix } from './pages/QuickFix';
 import { Report } from './pages/Report';
 import { Emergency } from './pages/Emergency';
+import { HospitalAdmin } from './pages/HospitalAdmin';
 import { GlobalEmergencyButton } from './components/GlobalEmergencyButton';
 import { BackendStatusBanner } from './components/BackendStatusBanner';
 
@@ -89,7 +90,8 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                       location.pathname === '/triage' ? 'Assessment' :
                         location.pathname === '/my-health' ? 'My Health' :
                           location.pathname === '/report' ? 'My Report' :
-                            location.pathname === '/quick-fix' ? 'Which Doctor?' : 'System View'}
+                            location.pathname === '/quick-fix' ? 'Which Doctor?' :
+                              location.pathname === '/hospital-admin' ? 'Hospital Beds' : 'System View'}
               <span className="text-slate-400 dark:text-slate-500 font-medium text-base bg-slate-200/50 dark:bg-slate-700/50 px-3 py-1 rounded-lg">
                 {user?.role === 'ADMIN' || user?.role === 'DOCTOR' ? 'Medical Staff' : 'Patient View'}
               </span>
@@ -98,10 +100,11 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           <div className="flex items-center gap-6">
             <a
               href="#/emergency"
-              className="px-5 py-3 rounded-2xl bg-red-600 hover:bg-red-700 text-white text-sm font-black shadow-lg flex items-center gap-2"
+              className="px-5 py-3 rounded-2xl bg-red-600 hover:bg-red-700 text-white text-sm font-black shadow-lg flex items-center gap-2 whitespace-nowrap"
             >
               <span className="material-symbols-outlined text-[20px]">emergency</span>
-              Help someone in an emergency
+              <span className="hidden xl:inline">Help someone in an emergency</span>
+              <span className="xl:hidden">Emergency</span>
             </a>
             <button
               aria-label="Toggle Dark Mode"
@@ -157,6 +160,7 @@ export default function App() {
             <Route path="/quick-fix" element={<ProtectedRoute><QuickFix /></ProtectedRoute>} />
             <Route path="/report" element={<ProtectedRoute><Report /></ProtectedRoute>} />
             <Route path="/emergency" element={<Emergency />} />
+            <Route path="/hospital-admin" element={<ProtectedRoute><HospitalAdmin /></ProtectedRoute>} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/config" element={<ProtectedRoute><Config /></ProtectedRoute>} />
