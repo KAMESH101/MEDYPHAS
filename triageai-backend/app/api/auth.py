@@ -7,7 +7,6 @@ from app.models.user import User
 from app.schemas.user import UserCreate, UserResponse, Token
 from app.services.auth import verify_password, get_password_hash, create_access_token
 from fastapi.security import OAuth2PasswordRequestForm
-from datetime import timedelta
 
 router = APIRouter()
 
@@ -51,9 +50,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSessi
         )
     
     # Create token
-    access_token_expires = timedelta(minutes=30)
     access_token = create_access_token(
-        data={"sub": user.username, "role": user.role, "is_doctor": user.is_doctor},
-        expires_delta=access_token_expires
+        data={"sub": user.username, "role": user.role, "is_doctor": user.is_doctor}
     )
     return {"access_token": access_token, "token_type": "bearer", "user": user}
