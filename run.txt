@@ -5,8 +5,9 @@ Prototype for Dexathon 2026 (team Codofobia). Demo data only - not medical advic
 ## Prerequisites
 - Python 3.11
 - Node.js 20+ (tested with Node 24)
-- Optional: a Gemini API key (https://aistudio.google.com/app/apikey) for AI explanations,
-  document upload and the staff assistant. Without it the app still runs with fallback text.
+- Optional: a Gemini API key (https://aistudio.google.com/app/apikey) for document upload, AI explanations,
+  read-aloud and the staff assistant. Without it the app still runs (template text, uploads disabled).
+- Optional: a Groq API key (https://console.groq.com/keys) as a backup for text explanations.
 
 ---
 
@@ -55,12 +56,27 @@ No API keys go in the frontend. All AI calls go through the backend.
 
 ---
 
-## 3. Demo accounts (created automatically on backend startup)
+## 3. Try it
+
+- Bystander mode (no login): http://localhost:3000/#/emergency
+- Patient mode: log in as patient_demo, open "Understand My Report", upload a file from ../demo/
+  (fictional samples only - free-tier AI may use submitted data)
+- Staff: log in as dr_strange -> Triage Assessment, Hospital Beds, Which Doctor?, System Status
+
+## 4. Demo accounts (created automatically on backend startup)
 
 - Medical staff: `dr_strange` / `password123`
 - Patient:       `patient_demo` / `password123`
 
 Or create a new account on the Sign Up page.
+
+---
+
+## 5. Deploy
+
+See "Deploy (free tiers)" in README.md: backend on Render (render.yaml Blueprint), frontend on Vercel
+(Root Directory medyphas-ai---intelligence-hub, VITE_API_URL = Render URL), then set CORS_ORIGINS on
+Render to the Vercel URL.
 
 ---
 

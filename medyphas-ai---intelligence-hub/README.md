@@ -1,53 +1,35 @@
-# Medyphas AI - Intelligence Hub (Client-Side)
+# Medyphas AI – Frontend
 
-The frontend interface for Medyphas AI, designed to provide a "Pixel Perfect" user experience. It uses a modern stack to deliver a responsive, accessible, and visually stunning application.
+React 19 + TypeScript + Vite. Prototype with demo data – not medical advice.
+See the [main README](../README.md) for the full overview and deploy steps.
 
-## 🎨 Client-Side Architecture
-
-### Tech Stack
-- **React 18**: Component-based UI library.
-- **TypeScript**: Ensures type safety across props, state, and API responses.
-- **Vite**: Ultra-fast build tool and development server.
-- **Tailwind CSS**: Utility-first styling framework.
-
-### Key Features & "Good" Practices
-
-1.  **Glassmorphism UI**
-    - We use `backdrop-filter: blur(12px)` and semi-transparent backgrounds (`bg-white/10`) to create a premium, depth-rich interface.
-    - Shadows (`shadow-clay`) are custom-configured in `tailwind.config.js` to enhance the 3D effect.
-
-2.  **Global State Management**
-    - **`AuthContext`**: Manages user sessions (Teacher/Doctor/Patient) and persists state via `localStorage`.
-    - **`ThemeContext`**: Toggles between Dark/Light modes, respecting system preferences.
-
-3.  **Performance Optimizations**
-    - **Code Splitting**: Routes are lazy-loaded to reduce initial bundle size.
-    - **Optimized Assets**: Images (like `Logo.png`) are served as distinct assets.
-    - **Debounced Input**: The "Quick Fix" search debounces API calls to prevent flooding the backend.
-
-4.  **Accessibility (a11y)**
-    - Semantic HTML (`<nav>`, `<main>`, `<section>`).
-    - Focus management for modals and forms.
-    - High contrast text colors for readability.
-
-## 📂 Component Structure
-
-- **`components/`**: Reusable UI blocks.
-    - `Sidebar.tsx`: Reliable navigation with active state highlighting.
-    - `SymptomSearch.tsx`: The core of the "Quick Fix" feature, handling complex user input and API fetching.
-- **`pages/`**: Route-specific views.
-    - `Dashboard.tsx`: The main hub, dynamically rendering content based on User Role.
-    - `QuickFix.tsx`: The AI interface for patients.
-
-## 🚀 Setup
+## Run
 
 ```bash
-# Install Dependencies
 npm install
-
-# Start Dev Server
-npm run dev
-
-# Build for Production
-npm run build
+cp .env.example .env      # VITE_API_URL=http://localhost:8000
+npm run dev               # http://localhost:3000
+npm run build             # production build in dist/
+npm run typecheck
 ```
+
+`VITE_API_URL` is the only setting. No AI keys belong here – all AI calls go through the backend.
+
+## Main screens (hash routes)
+
+| Route | Screen | Login |
+|---|---|---|
+| `/#/emergency` | Bystander mode: Call 108, location for the operator, tap chips, ranked hospitals | No |
+| `/#/report` | Patient mode: upload prescription / lab report, explanation in English/Tamil/Hindi, Listen, urgency, hospitals | Yes |
+| `/#/triage` | Staff triage assessment with Green/Yellow/Red result | Yes |
+| `/#/hospital-admin` | Staff: update free beds | Yes (staff) |
+| `/#/quick-fix` | "Which Doctor?" specialist helper (no diagnosis, no medicine) | Yes |
+| `/#/config` | System status (reads `/api/health`) | Yes |
+
+## Useful pieces
+
+- `services/api.ts` – all backend calls; shows the "Waking up server…" / "Server offline" banner, no mock data.
+- `services/risk.ts` + `components/RiskBadge.tsx` – LOW/MEDIUM/HIGH → Green/Yellow/Red.
+- `components/Disclaimer.tsx` – shown on every result screen.
+- `components/HospitalList.tsx` – ranked hospitals with directions and Call 108.
+- `services/emergency.ts` – 108 / 112.

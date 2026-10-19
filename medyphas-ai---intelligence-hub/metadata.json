@@ -1,5 +1,5 @@
 {
   "name": "Medyphas AI - Intelligence Hub",
-  "description": "A claymorphic medical triage dashboard powered by Gemini AI for real-time patient assessment and risk stratification.",
+  "description": "Medyphas AI prototype: explains prescriptions and lab reports (English, Tamil, Hindi), Green/Yellow/Red urgency from rules + ML, and a no-login bystander emergency mode. Demo data, not medical advice.",
   "requestFramePermissions": []
 }
