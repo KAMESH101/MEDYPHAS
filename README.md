@@ -159,17 +159,17 @@ Never put API keys in the frontend – everything prefixed `VITE_` is public.
 2. Render → **New → Blueprint** → select the repo. It reads [render.yaml](render.yaml)
    (free web service, `rootDir: triageai-backend`, Python 3.11 from `.python-version`,
    `pip install -r requirements.txt`, `uvicorn app.main:app --host 0.0.0.0 --port $PORT`, health check `/api/health`).
-3. Enter the prompted secrets: `GEMINI_API_KEY`, `GROQ_API_KEY` (optional), `CORS_ORIGINS`
-   (put your Vercel URL here after step 4 – you can edit it later). `SECRET_KEY` is generated.
+3. Enter the prompted secrets: `GEMINI_API_KEY` and `GROQ_API_KEY` (optional). `SECRET_KEY` is generated.
 4. Wait for the deploy, then open `https://<your-service>.onrender.com/api/health` →
    `"model_loaded": true`.
 
 ### Frontend → Vercel
 1. Vercel → **Add New → Project** → import the repo.
 2. **Root Directory:** `medyphas-ai---intelligence-hub` (framework Vite is detected; `vercel.json` sets build/output).
-3. Environment variable `VITE_API_URL` = your Render URL (no trailing slash). Deploy.
-4. Back in Render, set `CORS_ORIGINS` to the Vercel production URL (e.g. `https://medyphas-ai.vercel.app`) and save
-   (Render redeploys).
+3. `VITE_API_URL` is already set to the Render URL in `medyphas-ai---intelligence-hub/.env.production`
+   (change it there if your Render URL differs, or override it in Vercel's Environment Variables). Deploy.
+4. `CORS_ORIGINS` is set to `https://medyphas.vercel.app` in `render.yaml`. If your Vercel URL differs, change it
+   there (or in Render → Environment) and redeploy with **Save, rebuild, and deploy**.
 
 ### Free-tier notes
 - Render free services **sleep after ~15 min idle**; the first request can take up to a minute. The app shows

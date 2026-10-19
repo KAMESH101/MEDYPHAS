@@ -23,9 +23,9 @@ services:
         sync: false
       - key: GROQ_MODEL
         value: openai/gpt-oss-120b
-      # Your Vercel production URL, e.g. https://medyphas-ai.vercel.app (comma-separate several)
+      # Frontend URL(s) allowed to call the API (comma-separate several)
       - key: CORS_ORIGINS
-        sync: false
+        value: https://medyphas.vercel.app
       # Optional: also allow Vercel preview deployments, e.g. ^https://medyphas-ai-.*\.vercel\.app$
       - key: CORS_ORIGIN_REGEX
         sync: false
