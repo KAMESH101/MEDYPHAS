@@ -1,0 +1,92 @@
+# Medyphas AI - Project Setup & Run Instructions
+
+This guide will help you set up and run both the Backend and Frontend of the Medyphas AI application.
+
+## Prerequisites
+- **Python 3.13** (Required for backend compatibility)
+- **Node.js** (Required for frontend)
+
+---
+
+## 1. Backend Setup (`triageai-backend`)
+
+The backend is built with FastAPI. Currently, we are running a lightweight version focused on Authentication.
+
+### Step 1: Navigate to the backend directory
+```bash
+cd "triageai-backend"
+```
+
+### Step 2: Create a Virtual Environment (Python 3.13)
+If you haven't already created one:
+```bash
+python3.13 -m venv venv313
+```
+
+### Step 3: Activate the Virtual Environment
+```bash
+source venv313/bin/activate
+```
+
+### Step 4: Install Dependencies
+We use a specific requirements file for Authentication to avoid conflicts with heavy ML libraries:
+```bash
+pip install -r requirements-auth.txt
+```
+
+### Step 5: Run the Server
+Start the server using `uvicorn`. Note that we are running `app.main_auth` specifically.
+```bash
+uvicorn app.main_auth:app --reload --host 0.0.0.0 --port 8000
+```
+
+> **Success:** You should see `Uvicorn running on http://0.0.0.0:8000`.
+
+---
+
+## 2. Frontend Setup (`medyphas-ai---intelligence-hub`)
+
+The frontend is built with React and Vite.
+
+### Step 1: Navigate to the frontend directory
+Open a **new terminal** window/tab and run:
+```bash
+cd "medyphas-ai---intelligence-hub"
+```
+
+### Step 2: Install Dependencies
+```bash
+npm install
+```
+
+### Step 3: Run the Development Server
+```bash
+npm run dev
+```
+
+> **Success:** You should see the app running at `http://localhost:3000`.
+
+---
+
+## 3. Accessing the Application
+
+- **Frontend URL**: [http://localhost:3000](http://localhost:3000)
+- **Backend API Docs**: [http://localhost:8000/docs](http://localhost:8000/docs)
+
+### Default Credentials
+You can log in with:
+- **Username**: `dr_strange`
+- **Password**: `password123`
+
+Or create a new account via the **Sign Up** page.
+
+---
+
+## Troubleshooting
+
+- **Port in use?**
+  If port 3000 or 8000 is taken, find the process and kill it:
+  `lsof -t -i:8000 | xargs kill -9`
+  
+- **Backend errors?**
+  Ensure you are using the `venv313` virtual environment and running `app.main_auth:app`.

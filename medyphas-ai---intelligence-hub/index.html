@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Medyphas AI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#6366f1",
+              "primary-dark": "#4f46e5", 
+              "background-light": "#f0f2f5", 
+              "background-dark": "#1e293b",
+              "surface-light": "#ffffff",
+              "surface-dark": "#334155",
+              "medical-blue": "#0ea5e9",
+              "critical-red": "#f43f5e",
+              "warning-amber": "#f59e0b",
+              "safe-green": "#10b981",
+            },
+            fontFamily: {
+              "display": ["Plus Jakarta Sans", "sans-serif"],
+              "mono": ["JetBrains Mono", "monospace"]
+            },
+            boxShadow: {
+              "clay": "8px 8px 16px 0px rgba(0, 0, 0, 0.08), -8px -8px 16px 0px rgba(255, 255, 255, 0.8), inset 2px 2px 4px 0px rgba(255, 255, 255, 0.5), inset -2px -2px 4px 0px rgba(0, 0, 0, 0.02)",
+              "clay-pressed": "inset 6px 6px 12px 0px rgba(0, 0, 0, 0.08), inset -6px -6px 12px 0px rgba(255, 255, 255, 0.8)",
+              "clay-dark": "8px 8px 16px 0px rgba(0, 0, 0, 0.4), -8px -8px 16px 0px rgba(255, 255, 255, 0.05), inset 2px 2px 4px 0px rgba(255, 255, 255, 0.05), inset -2px -2px 4px 0px rgba(0, 0, 0, 0.2)",
+              "clay-dark-pressed": "inset 6px 6px 12px 0px rgba(0, 0, 0, 0.4), inset -6px -6px 12px 0px rgba(255, 255, 255, 0.05)",
+              "clay-primary": "8px 8px 16px 0px rgba(99, 102, 241, 0.4), -8px -8px 16px 0px rgba(255, 255, 255, 0.2), inset 2px 2px 4px 0px rgba(255, 255, 255, 0.3), inset -2px -2px 4px 0px rgba(0, 0, 0, 0.1)",
+              "clay-dial": "6px 6px 12px rgba(163, 177, 198, 0.6), -6px -6px 12px rgba(255, 255, 255, 0.8)",
+              "clay-dial-dark": "6px 6px 12px rgba(0,0,0,0.5), -6px -6px 12px rgba(255,255,255,0.05)"
+            },
+            borderRadius: {
+              "clay": "24px",
+              "clay-sm": "16px"
+            }
+          },
+        },
+      }
+    </script>
+    <style>
+      body {
+        background-color: #f0f2f5;
+        transition: background-color 0.3s ease;
+      }
+      .dark body {
+        background-color: #0f172a;
+      }
+      .clay-card {
+        transition: all 0.3s ease;
+      }
+      .clay-card:hover {
+        transform: translateY(-2px);
+      }
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+      }
+      .dark ::-webkit-scrollbar-thumb {
+        background: #475569;
+      }
+      .gauge-arc { transition: stroke-dasharray 1s ease-out; }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react-router-dom": "https://esm.sh/react-router-dom@^7.13.0",
+    "recharts": "https://esm.sh/recharts@^3.7.0",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
+    "@google/genai": "https://esm.sh/@google/genai@^1.41.0",
+    "react/": "https://esm.sh/react@^19.2.4/",
+    "react": "https://esm.sh/react@^19.2.4"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body>
+    <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>
