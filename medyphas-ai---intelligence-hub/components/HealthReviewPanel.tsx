@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { HealthFormData, RiskLevel } from '../types';
+import { AMBULANCE_NUMBER, EMERGENCY_NUMBER, telLink } from '../services/emergency';
 
 interface HealthReviewPanelProps {
     data: HealthFormData;
@@ -190,7 +191,7 @@ export const HealthReviewPanel: React.FC<HealthReviewPanelProps> = ({
                             <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-700/50">
                                 {(riskLevel === RiskLevel.LOW || riskLevel === RiskLevel.MEDIUM) ? (
                                     <button
-                                        onClick={() => navigate('/dashboard')}
+                                        onClick={() => navigate('/')}
                                         className="w-full py-3 bg-gradient-to-r from-primary to-indigo-600 text-white rounded-xl font-bold shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2"
                                     >
                                         <span className="material-symbols-outlined">calendar_add_on</span>
@@ -205,13 +206,19 @@ export const HealthReviewPanel: React.FC<HealthReviewPanelProps> = ({
                                         <p className="text-sm text-red-700 dark:text-red-300">
                                             Immediate medical attention is recommended to prevent further health loss.
                                         </p>
-                                        <button
-                                            onClick={() => window.open('tel:911', '_self')}
+                                        <a
+                                            href={telLink(AMBULANCE_NUMBER)}
                                             className="w-full py-3 bg-red-600 text-white rounded-xl font-bold shadow-lg hover:bg-red-700 transition-colors flex items-center justify-center gap-2"
                                         >
-                                            <span className="material-symbols-outlined">local_hospital</span>
-                                            Proceed to Hospital / Fast Track
-                                        </button>
+                                            <span className="material-symbols-outlined">call</span>
+                                            Call {AMBULANCE_NUMBER} (Ambulance)
+                                        </a>
+                                        <a
+                                            href={telLink(EMERGENCY_NUMBER)}
+                                            className="block text-center text-sm font-bold text-red-700 dark:text-red-300 underline underline-offset-2"
+                                        >
+                                            or call {EMERGENCY_NUMBER} (National Emergency)
+                                        </a>
                                     </div>
                                 )}
                             </div>
