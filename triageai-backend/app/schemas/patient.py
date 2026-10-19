@@ -73,6 +73,19 @@ class TriageOutput(BaseModel):
     triage_timestamp: datetime
 
 
+class ReportAnalysis(TriageOutput):
+    """Patient mode: triage result plus what was read from the document and a plain-language explanation."""
+
+    document_type: str
+    medicines: List[dict] = Field(default_factory=list)
+    lab_values: List[dict] = Field(default_factory=list)
+    language: str
+    report_explanation: dict
+    explanation_source: str  # "gemini", "groq" or "rules"
+    cached: bool = False
+    disclaimer: str
+
+
 class PatientResponse(BaseModel):
     """Patient database record response."""
     

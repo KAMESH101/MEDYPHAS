@@ -3,6 +3,8 @@
 The API key and model name come from the backend environment only (GEMINI_API_KEY,
 GEMINI_MODEL). Gemini never decides the risk level: that comes from the rule engine + ML.
 """
+import io
+import wave
 from typing import List, Optional, Type, TypeVar
 
 from google import genai
@@ -29,6 +31,17 @@ ASSISTANT_SYSTEM_INSTRUCTION = (
     "decisions; say that final decisions rest with the treating clinician. Keep answers concise and plain text. "
     "If something sounds like an emergency, tell the user to call 108 (ambulance) or 112."
 )
+
+
+def pcm_to_wav(pcm: bytes, sample_rate: int = 24_000) -> bytes:
+    """Wrap raw 16-bit mono PCM (what Gemini TTS returns) in a WAV container."""
+    buffer = io.BytesIO()
+    with wave.open(buffer, "wb") as wav:
+        wav.setnchannels(1)
+        wav.setsampwidth(2)
+        wav.setframerate(sample_rate)
+        wav.writeframes(pcm)
+    return buffer.getvalue()
 
 
 def _is_configured(key: str) -> bool:
@@ -91,7 +104,21 @@ class GeminiService:
         # SDK couldn't parse it for us; validate the raw text ourselves
         return schema.model_validate_json(response.text or "")
 
-    async def generate_explanation(
+    async def generate_text(self, prompt: str, temperature: float = 0.3) -> str:
+        """Plain text generation. Raises on any API error (callers decide the fallback)."""
+        if not self.is_available():
+            raise RuntimeError("Gemini API key not configured")
+        response = await self.client.aio.models.generate_content(
+            model=self.model_name,
+            contents=prompt,
+            config=types.GenerateContentConfig(temperature=temperature),
+        )
+        text = (response.text or "").strip()
+        if not text:
+            raise ValueError("Gemini returned an empty response")
+        return text
+
+    def build_explanation_prompt(
         self,
         patient: PatientInput,
         risk_level: str,
@@ -99,15 +126,8 @@ class GeminiService:
         top_factors: List[TopFactor],
         rule_triggered: Optional[str] = None
     ) -> str:
-        """
-        Generate human-readable triage explanation using Gemini.
-
-        Falls back to a template sentence if Gemini is unavailable or the call fails.
-        """
-        if not self.is_available():
-            return self._fallback_explanation(patient, risk_level, department, top_factors)
-
-        prompt = f"""You are a medical AI assistant helping explain patient triage decisions to healthcare professionals.
+        """Prompt for the 2-3 sentence triage explanation shown to staff."""
+        return f"""You are a medical AI assistant helping explain patient triage decisions to healthcare professionals.
 
 Patient Profile:
 - Age: {patient.age} years old
@@ -131,17 +151,45 @@ Top Contributing Factors (from the risk model):
 Write a concise, professional 2-3 sentence explanation of why this patient was classified as {risk_level} risk.
 Mention the most important factors. {SAFETY_RULES} Do not use markdown formatting."""
 
+    async def generate_explanation(
+        self,
+        patient: PatientInput,
+        risk_level: str,
+        department: str,
+        top_factors: List[TopFactor],
+        rule_triggered: Optional[str] = None
+    ) -> str:
+        """
+        Generate human-readable triage explanation using Gemini.
+
+        Falls back to a template sentence if Gemini is unavailable or the call fails.
+        """
+        prompt = self.build_explanation_prompt(patient, risk_level, department, top_factors, rule_triggered)
         try:
-            response = await self.client.aio.models.generate_content(
-                model=self.model_name,
-                contents=prompt,
-                config=types.GenerateContentConfig(temperature=0.3),
-            )
-            text = (response.text or "").strip()
-            return text or self._fallback_explanation(patient, risk_level, department, top_factors)
+            return await self.generate_text(prompt)
         except Exception as e:
-            print(f"⚠️  Gemini API call failed: {e}")
-            return self._fallback_explanation(patient, risk_level, department, top_factors)
+            if self.is_available():
+                print(f"⚠️  Gemini API call failed: {e}")
+            return self.fallback_explanation(patient, risk_level, department, top_factors)
+
+    async def text_to_speech(self, text: str, voice: str = "Kore") -> bytes:
+        """Read text aloud with the Gemini TTS model. Returns a WAV file (24 kHz, 16-bit mono)."""
+        if not self.is_available():
+            raise RuntimeError("Gemini API key not configured")
+        response = await self.client.aio.models.generate_content(
+            model=settings.GEMINI_TTS_MODEL,
+            contents=text,
+            config=types.GenerateContentConfig(
+                response_modalities=["AUDIO"],
+                speech_config=types.SpeechConfig(
+                    voice_config=types.VoiceConfig(
+                        prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=voice)
+                    )
+                ),
+            ),
+        )
+        pcm = response.candidates[0].content.parts[0].inline_data.data
+        return pcm_to_wav(pcm)
 
     async def chat(self, history: List[dict], message: str) -> str:
         """Staff assistant chat. history items are {"role": "user"|"model", "text": str}."""
@@ -171,7 +219,7 @@ Mention the most important factors. {SAFETY_RULES} Do not use markdown formattin
             lines.append(f"{i}. {factor.feature} ({factor.direction} risk, contribution: {factor.contribution:.2f})")
         return "\n".join(lines)
 
-    def _fallback_explanation(
+    def fallback_explanation(
         self,
         patient: PatientInput,
         risk_level: str,

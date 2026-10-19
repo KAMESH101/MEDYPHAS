@@ -17,4 +17,6 @@ class HealthResponse(BaseModel):
     status: str
     model_loaded: bool
     gemini_available: bool
+    groq_available: bool = False
+    gemini_model: str = ""
     database: str

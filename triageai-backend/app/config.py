@@ -22,6 +22,13 @@ class Settings(BaseSettings):
     # AI providers (server-side only; never sent to the browser)
     GEMINI_API_KEY: str = ""
     GEMINI_MODEL: str = "gemini-3.8-flash"
+    GEMINI_TTS_MODEL: str = "gemini-3.8-flash-tts"
+    # Groq: fallback for text explanations only (no document reading)
+    GROQ_API_KEY: str = ""
+    GROQ_MODEL: str = "openai/gpt-oss-120b"
+    # Number of analysed documents kept in memory (keyed by file hash) to save free-tier quota
+    AI_CACHE_SIZE: int = 128
+    MAX_UPLOAD_MB: int = 10
 
     # Database. On Render's free tier the disk is temporary, so demo data is re-seeded on startup.
     DATABASE_URL: str = f"sqlite+aiosqlite:///{DEFAULT_DB_PATH.as_posix()}"

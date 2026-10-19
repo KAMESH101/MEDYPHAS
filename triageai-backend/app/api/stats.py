@@ -7,6 +7,8 @@ from app.models.patient import Patient
 from app.schemas.stats import StatsResponse, HealthResponse
 from app.services.ml_service import ml_service
 from app.services.gemini_service import gemini_service
+from app.services.ai_provider import groq_available
+from app.config import settings
 
 router = APIRouter(prefix="/api", tags=["Analytics"])
 
@@ -79,5 +81,7 @@ async def health_check(db: AsyncSession = Depends(get_db)):
         status="ok" if db_status == "connected" else "degraded",
         model_loaded=ml_service.is_loaded(),
         gemini_available=gemini_service.is_available(),
+        groq_available=groq_available(),
+        gemini_model=settings.GEMINI_MODEL,
         database=db_status
     )

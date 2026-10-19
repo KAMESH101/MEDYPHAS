@@ -45,3 +45,23 @@ class ReportExplanation(BaseModel):
     summary: str
     medicines: List[MedicineExplanation] = Field(default_factory=list)
     lab_values: List[LabExplanation] = Field(default_factory=list)
+
+
+DocumentType = Literal["prescription", "lab_report", "clinical_note", "other"]
+
+
+class ExtractedDocument(BaseModel):
+    """Everything Gemini reads from an uploaded document. Unknown values are null, never guessed."""
+
+    document_type: DocumentType = "other"
+    age: Optional[int] = Field(None, description="Patient age in years, null if not visible")
+    gender: Optional[Literal["M", "F", "Other"]] = None
+    symptoms: List[str] = Field(default_factory=list, description="Symptoms or complaints, lowercase")
+    bp_systolic: Optional[int] = None
+    bp_diastolic: Optional[int] = None
+    heart_rate: Optional[int] = None
+    temperature: Optional[float] = Field(None, description="Body temperature in Celsius")
+    spo2: Optional[float] = Field(None, description="Oxygen saturation in percent")
+    pre_existing: List[str] = Field(default_factory=list, description="Known conditions written on the document, lowercase")
+    medicines: List[Medicine] = Field(default_factory=list)
+    lab_values: List[LabValue] = Field(default_factory=list)

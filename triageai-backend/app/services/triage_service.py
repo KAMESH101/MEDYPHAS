@@ -9,7 +9,7 @@ from app.models.patient import Patient
 from app.services.rule_engine import evaluate_rules, baseline_risk
 from app.services.lab_rules import LabAlert, evaluate_lab_values
 from app.services.ml_service import ml_service
-from app.services.gemini_service import gemini_service
+from app.services.ai_provider import ai_provider
 
 RISK_ORDER = {"LOW": 0, "MEDIUM": 1, "HIGH": 2}
 TRAUMA_KEYWORDS = ("bleeding", "injury", "injured", "accident", "fracture", "burn", "can't move", "cannot move", "fall")
@@ -132,12 +132,12 @@ async def run_full_triage(
     
     Pipeline:
     1. Urgency decision: clinical rules + lab danger rules + ML (see decide_risk)
-    2. Explanation generation (Gemini, or fallback text)
+    2. Explanation generation (Gemini -> Groq -> fallback text)
     3. Database persistence
     """
     decision = decide_risk(patient_input, lab_values)
 
-    explanation = await gemini_service.generate_explanation(
+    explanation, _source = await ai_provider.explain_triage(
         patient=patient_input,
         risk_level=decision.risk_level,
         department=decision.department,
