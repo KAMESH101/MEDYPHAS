@@ -87,14 +87,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
             <>
               <NavItem to="/queue" icon="monitor_heart" label="Live Triage" badge="LIVE" />
               <NavItem to="/diagnostics" icon="psychology" label="AI Diagnostics" />
-              <NavItem to="/quick-fix" icon="medication" label="Quick Fix AI" badge="NEW" />
+              <NavItem to="/quick-fix" icon="stethoscope" label="Which Doctor?" />
             </>
           )}
 
           {user?.role === 'PATIENT' && (
             <>
               <NavItem to="/my-health" icon="vital_signs" label="My Health" />
-              <NavItem to="/quick-fix" icon="medication" label="Quick Fix AI" badge="NEW" />
+              <NavItem to="/quick-fix" icon="stethoscope" label="Which Doctor?" />
             </>
           )}
 

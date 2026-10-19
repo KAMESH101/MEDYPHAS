@@ -388,7 +388,7 @@ const DoctorDashboard: React.FC<{ user: any, appointments: Appointment[] }> = ({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="bg-surface-light dark:bg-surface-dark p-8 rounded-clay shadow-clay dark:shadow-clay-dark border border-white/50 dark:border-slate-700 flex flex-col">
           <div className="flex justify-between items-center mb-6">
-            <h3 className="font-bold text-lg text-slate-800 dark:text-white">Risk Stratification</h3>
+            <h3 className="font-bold text-lg text-slate-800 dark:text-white">Urgency Mix (sample)</h3>
             <button className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors text-slate-500"><span className="material-symbols-outlined font-bold">more_horiz</span></button>
           </div>
           <div className="relative flex-1 flex items-center justify-center min-h-[280px]">
@@ -409,9 +409,9 @@ const DoctorDashboard: React.FC<{ user: any, appointments: Appointment[] }> = ({
           </div>
           <div className="space-y-4 mt-6">
             {[
-              { label: 'Low Risk', val: '60%', color: 'safe-green', bg: 'bg-safe-green' },
-              { label: 'Medium Risk', val: '30%', color: 'warning-amber', bg: 'bg-warning-amber' },
-              { label: 'High Risk', val: '10%', color: 'critical-red', bg: 'bg-critical-red' }
+              { label: 'Green (not urgent)', val: '60%', color: 'safe-green', bg: 'bg-safe-green' },
+              { label: 'Yellow (see doctor soon)', val: '30%', color: 'warning-amber', bg: 'bg-warning-amber' },
+              { label: 'Red (urgent)', val: '10%', color: 'critical-red', bg: 'bg-critical-red' }
             ].map(item => (
               <div key={item.label} className="flex items-center justify-between text-sm p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl shadow-sm border border-white/50 dark:border-slate-700/50">
                 <div className="flex items-center gap-3">

@@ -1,4 +1,4 @@
-import { User, UserRole } from '../types';
+import { HealthFormData, User, UserRole } from '../types';
 import { API_URL } from './config';
 import { backendStatus } from './backendStatus';
 
@@ -13,6 +13,76 @@ export interface HealthStatus {
     model_loaded: boolean;
     gemini_available: boolean;
     database: string;
+}
+
+export interface RankedHospital {
+    id: string;
+    name: string;
+    area?: string;
+    lat: number;
+    lng: number;
+    phone?: string;
+    specialties: string[];
+    beds_available: number;
+    has_trauma_care: boolean;
+    distance_km: number | null;
+    score: number;
+    matched_specialties: string[];
+    maps_url: string;
+    reasons: string[];
+}
+
+export interface RankResult {
+    required_specialties: string[];
+    location_used: boolean;
+    notice: string;
+    hospitals: RankedHospital[];
+}
+
+export interface Hospital {
+    id: string;
+    name: string;
+    area?: string;
+    lat: number;
+    lng: number;
+    specialties: string[];
+    beds_available: number;
+    has_trauma_care: boolean;
+    phone?: string;
+}
+
+export type ReportLanguage = 'en' | 'ta' | 'hi';
+
+export interface ReportAnalysis {
+    patient_id: string;
+    risk_level: 'LOW' | 'MEDIUM' | 'HIGH';
+    confidence: number;
+    department: string;
+    rule_triggered: string | null;
+    top_factors: { feature: string; contribution: number; direction: string }[];
+    lab_alerts: { test: string; value: number | null; unit: string | null; level: string; message: string }[];
+    explanation: string;
+    document_type: string;
+    medicines: { name: string; dose?: string; timing?: string; duration?: string }[];
+    lab_values: { name: string; value: number | null; unit?: string; reference_range?: string }[];
+    language: ReportLanguage;
+    report_explanation: {
+        summary: string;
+        medicines: { name: string; explanation: string }[];
+        lab_values: { name: string; explanation: string }[];
+    };
+    explanation_source: 'gemini' | 'groq' | 'rules';
+    cached: boolean;
+    disclaimer: string;
+    patient: any;
+}
+
+export interface SpecialistAdvice {
+    urgent: boolean;
+    red_flags: string[];
+    message: string;
+    suggestions: { specialty: string; matched_symptoms: string[]; reason: string }[];
+    disclaimer: string;
 }
 
 const WAKING_AFTER_MS = 3000;
@@ -44,7 +114,7 @@ const errorMessage = async (response: Response, fallback: string): Promise<strin
  * fetch() wrapper that reports backend reachability to the status banner.
  * No silent mock data: if the server is down, callers get a real error.
  */
-async function request<T>(path: string, init: RequestInit, fallbackError: string): Promise<T> {
+async function request<T>(path: string, init: RequestInit, fallbackError: string, raw = false): Promise<T> {
     const wakingTimer = setTimeout(() => backendStatus.set('waking'), WAKING_AFTER_MS);
     try {
         for (let attempt = 0; ; attempt++) {
@@ -66,12 +136,25 @@ async function request<T>(path: string, init: RequestInit, fallbackError: string
             if (!response.ok) {
                 throw new Error(await errorMessage(response, fallbackError));
             }
-            return response.json();
+            return (raw ? response.blob() : response.json()) as Promise<T>;
         }
     } finally {
         clearTimeout(wakingTimer);
     }
 }
+
+/** Form data (camelCase) -> backend PatientInput (snake_case). */
+export const toTriagePayload = (data: HealthFormData) => ({
+    age: data.age,
+    gender: data.gender === 'Male' ? 'M' : data.gender === 'Female' ? 'F' : 'Other',
+    symptoms: data.symptoms,
+    bp_systolic: data.vitals.bpSystolic,
+    bp_diastolic: data.vitals.bpDiastolic,
+    heart_rate: data.vitals.heartRate,
+    temperature: data.vitals.temp,
+    spo2: data.vitals.spo2,
+    pre_existing: data.preExistingConditions,
+});
 
 const toUser = (u: any): User => ({
     id: u.id,
@@ -120,12 +203,53 @@ export const api = {
         }
     },
 
-    async quickFix(data: { symptoms: string[], history: string }): Promise<any> {
-        return request('/api/quick-fix', {
+    async specialistHelper(data: { symptoms: string[], history: string }): Promise<SpecialistAdvice> {
+        return request('/api/specialist-helper', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', ...authHeader() },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data),
-        }, 'Quick fix analysis failed');
+        }, 'Specialist helper failed');
+    },
+
+    /** Patient mode: upload a prescription / lab report (PDF, PNG, JPG) and get it explained. */
+    async analyzeReport(file: File, language: ReportLanguage): Promise<ReportAnalysis> {
+        const form = new FormData();
+        form.append('file', file);
+        form.append('language', language);
+        return request('/api/triage/upload', { method: 'POST', headers: authHeader(), body: form }, 'Could not read the document');
+    },
+
+    async rankHospitals(params: { lat?: number | null, lng?: number | null, specialty?: string, symptoms?: string[], limit?: number }): Promise<RankResult> {
+        const query = new URLSearchParams();
+        if (params.lat != null && params.lng != null) {
+            query.set('lat', String(params.lat));
+            query.set('lng', String(params.lng));
+        }
+        if (params.specialty) query.set('specialty', params.specialty);
+        if (params.symptoms?.length) query.set('symptoms', params.symptoms.join(','));
+        if (params.limit) query.set('limit', String(params.limit));
+        return request(`/api/hospitals/rank?${query}`, { method: 'GET' }, 'Could not load hospitals');
+    },
+
+    async listHospitals(): Promise<Hospital[]> {
+        return request('/api/hospitals', { method: 'GET' }, 'Could not load hospitals');
+    },
+
+    async updateBeds(hospitalId: string, beds: number): Promise<Hospital> {
+        return request(`/api/hospitals/${encodeURIComponent(hospitalId)}/beds`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', ...authHeader() },
+            body: JSON.stringify({ beds_available: beds }),
+        }, 'Could not update beds');
+    },
+
+    /** Gemini TTS through the backend; throws if unavailable so callers can use speechSynthesis. */
+    async speak(text: string, language: ReportLanguage): Promise<Blob> {
+        return request('/api/tts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text, language }),
+        }, 'Text-to-speech unavailable', true);
     },
 
     async health(): Promise<HealthStatus> {

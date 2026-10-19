@@ -263,7 +263,7 @@ export const HealthInputForm: React.FC<HealthInputFormProps> = ({
                                 </>
                             ) : (
                                 <>
-                                    <span>{showAIButton ? 'Generate AI Diagnosis' : 'Save Health Data'}</span>
+                                    <span>{showAIButton ? 'Check Urgency' : 'Save Health Data'}</span>
                                     <span className="material-symbols-outlined group-hover:rotate-12 transition-transform">
                                         {showAIButton ? 'auto_awesome' : 'save'}
                                     </span>

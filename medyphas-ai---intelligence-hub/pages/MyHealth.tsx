@@ -3,7 +3,7 @@ import { HealthInputForm } from '../components/HealthInputForm';
 import { HealthReviewPanel } from '../components/HealthReviewPanel';
 import { EHRUpload } from '../components/EHRUpload';
 import { HealthFormData } from '../types';
-import { api } from '../services/api';
+import { api, toTriagePayload } from '../services/api';
 
 export const MyHealth: React.FC = () => {
     const [showEHRUpload, setShowEHRUpload] = useState(true);
@@ -12,19 +12,17 @@ export const MyHealth: React.FC = () => {
     const [initialFormData, setInitialFormData] = useState<Partial<HealthFormData> | undefined>();
     const [triageResult, setTriageResult] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     const handleSubmit = async (data: HealthFormData) => {
         setSubmittedData(data);
         setIsLoading(true);
+        setError(null);
+        setTriageResult(null);
         try {
-            // Call Triage API
-            console.log("Submitting for triage...", data);
-            const result = await api.triage(data);
-            console.log("Triage Result:", result);
-            setTriageResult(result);
-        } catch (error) {
-            console.error("Triage error:", error);
-            // Fallback or error handling
+            setTriageResult(await api.triage(toTriagePayload(data)));
+        } catch (err: any) {
+            setError(err?.message || 'Could not check urgency. Please try again.');
         } finally {
             setIsLoading(false);
             setShowReview(true);
@@ -139,16 +137,23 @@ export const MyHealth: React.FC = () => {
                         <div className="flex flex-col items-center justify-center py-20 animate-in fade-in">
                             <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
                             <p className="text-xl font-bold text-slate-600 dark:text-slate-300">Analyzing Health Data...</p>
-                            <p className="text-sm text-slate-400">Please wait while our AI assesses your vitals.</p>
+                            <p className="text-sm text-slate-400">Checking your vitals and symptoms against safety rules and the risk model.</p>
                         </div>
                     ) : (
-                        <HealthReviewPanel
-                            data={submittedData}
-                            riskLevel={triageResult?.risk_level}
-                            diagnosis={triageResult?.explanation}
-                            aiConfidence={triageResult?.confidence ? Math.round(triageResult.confidence * 100) : undefined}
-                            recommendedActions={triageResult?.recommended_actions}
-                        />
+                        <>
+                            {error && (
+                                <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-sm font-medium text-red-700 dark:text-red-300">
+                                    {error}
+                                </div>
+                            )}
+                            <HealthReviewPanel
+                                data={submittedData}
+                                riskLevel={triageResult?.risk_level}
+                                explanation={triageResult?.explanation}
+                                department={triageResult?.department}
+                                aiConfidence={triageResult?.confidence ? Math.round(triageResult.confidence * 100) : undefined}
+                            />
+                        </>
                     )
                 )
             )}

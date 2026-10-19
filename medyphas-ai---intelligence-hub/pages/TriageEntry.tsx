@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
-import { api } from '../services/api';
-import { RiskLevel, HealthFormData } from '../types';
+import { api, toTriagePayload } from '../services/api';
+import { riskInfo } from '../services/risk';
+import { RiskBadge } from '../components/RiskBadge';
+import { Disclaimer } from '../components/Disclaimer';
+import { HealthFormData } from '../types';
 import { useNavigate } from 'react-router-dom';
 
 import { EHRUpload } from '../components/EHRUpload';
@@ -50,25 +53,16 @@ export const TriageEntry: React.FC = () => {
     setError(null);
 
     try {
-      const patientData = {
-        age: data.age,
-        gender: data.gender === 'Male' ? 'M' : data.gender === 'Female' ? 'F' : 'Other',
-        symptoms: data.symptoms,
-        bp_systolic: data.vitals.bpSystolic,
-        bp_diastolic: data.vitals.bpDiastolic,
-        heart_rate: data.vitals.heartRate,
-        temperature: data.vitals.temp,
-        spo2: data.vitals.spo2,
-        pre_existing: data.preExistingConditions
-      };
+      const patientData = toTriagePayload(data);
 
       const assessment = await api.triage(patientData);
 
       setResult({
+        patientId: assessment.patient_id,
         riskLevel: assessment.risk_level,
-        diagnosis: assessment.explanation.split('\n')[0],
+        ruleTriggered: assessment.rule_triggered,
+        summary: assessment.explanation,
         aiConfidence: Math.round(assessment.confidence * 100),
-        recommendedActions: assessment.explanation.split('\n').filter((line: string) => line.trim().startsWith('-')).map((line: string) => line.replace('-', '').trim()).slice(0, 3) || ["Consult Specialist", "Monitor Vitals", "Review History"],
         fullExplanation: assessment.explanation,
         department: assessment.department,
         topFactors: assessment.top_factors,
@@ -78,7 +72,7 @@ export const TriageEntry: React.FC = () => {
 
     } catch (err: any) {
       console.error(err);
-      setError(err.message || 'Failed to generate diagnosis. Please check your inputs.');
+      setError(err.message || 'Failed to check urgency. Please check your inputs.');
     } finally {
       setLoading(false);
     }
@@ -195,49 +189,36 @@ export const TriageEntry: React.FC = () => {
 
           {result && (
             <>
-              {/* Risk Alert */}
-              <div className={`rounded-2xl p-5 shadow-sm border animate-in slide-in-from-right-4 duration-500 ${result.riskLevel === RiskLevel.CRITICAL || result.riskLevel === RiskLevel.HIGH
-                ? 'bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-900/30'
-                : 'bg-amber-50 dark:bg-amber-900/10 border-amber-100 dark:border-amber-900/30'
-                }`}>
+              {/* Urgency (traffic light from backend rules + ML) */}
+              <div className={`rounded-2xl p-5 shadow-sm border animate-in slide-in-from-right-4 duration-500 ${riskInfo(result.riskLevel).soft}`}>
                 <div className="flex items-start gap-4">
-                  <div className={`p-3 rounded-xl shadow-sm ${result.riskLevel === RiskLevel.CRITICAL || result.riskLevel === RiskLevel.HIGH
-                    ? 'bg-red-100 dark:bg-red-900/30 text-danger'
-                    : 'bg-amber-100 dark:bg-amber-900/30 text-amber-500'
-                    }`}>
-                    <span className="material-symbols-outlined text-2xl">priority_high</span>
+                  <div className={`p-3 rounded-xl shadow-sm text-white ${riskInfo(result.riskLevel).dot}`}>
+                    <span className="material-symbols-outlined text-2xl">traffic</span>
                   </div>
                   <div>
-                    <h4 className={`font-bold text-sm mb-1 ${result.riskLevel === RiskLevel.CRITICAL || result.riskLevel === RiskLevel.HIGH
-                      ? 'text-danger'
-                      : 'text-amber-600'
-                      }`}>{result.riskLevel} RISK DETECTED</h4>
+                    <div className="mb-2"><RiskBadge level={result.riskLevel} showTitle /></div>
                     <p className="text-xs font-medium text-slate-600 dark:text-slate-300 leading-relaxed">
-                      {result.diagnosis}
+                      {result.summary}
                     </p>
                   </div>
                 </div>
               </div>
 
-              {/* Actions */}
+              {/* What to do */}
               <div className="bg-blue-50 dark:bg-blue-900/10 rounded-2xl p-5 shadow-sm border border-blue-100 dark:border-blue-900/30 animate-in slide-in-from-right-4 duration-500 delay-100">
                 <div className="flex items-start gap-4">
                   <div className="bg-blue-100 dark:bg-blue-900/30 p-3 rounded-xl text-primary shadow-sm">
                     <span className="material-symbols-outlined text-2xl">fact_check</span>
                   </div>
                   <div>
-                    <h4 className="font-bold text-sm text-primary mb-1">Recommended Actions</h4>
-                    <ul className="text-xs font-medium text-slate-600 dark:text-slate-300 space-y-2">
-                      {result.recommendedActions?.map((action: string, i: number) => (
-                        <li key={i} className="flex items-start gap-2">
-                          <span className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0"></span>
-                          {action}
-                        </li>
-                      ))}
-                    </ul>
+                    <h4 className="font-bold text-sm text-primary mb-1">Next step</h4>
+                    <p className="text-xs font-medium text-slate-600 dark:text-slate-300">{riskInfo(result.riskLevel).action}</p>
+                    <p className="text-xs font-medium text-slate-500 mt-1">Department: {result.department}</p>
                   </div>
                 </div>
               </div>
+
+              <Disclaimer />
             </>
           )}
         </div>
@@ -246,7 +227,7 @@ export const TriageEntry: React.FC = () => {
         {result && (
           <div className="p-6 border-t border-slate-200 dark:border-slate-700/30 bg-white/30 dark:bg-slate-800/30 rounded-b-[24px]">
             <div className="flex items-center justify-between text-xs font-bold text-slate-500 mb-3">
-              <span className="uppercase tracking-wider">AI Confidence Score</span>
+              <span className="uppercase tracking-wider">Confidence</span>
               <span className="text-primary text-base">{result.aiConfidence}%</span>
             </div>
             <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-3 shadow-inner">

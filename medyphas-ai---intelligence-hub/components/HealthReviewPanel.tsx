@@ -1,23 +1,28 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { HealthFormData, RiskLevel } from '../types';
+import { HealthFormData } from '../types';
+import { riskInfo } from '../services/risk';
+import { RiskBadge } from './RiskBadge';
+import { Disclaimer } from './Disclaimer';
+import { HospitalList } from './HospitalList';
 import { AMBULANCE_NUMBER, EMERGENCY_NUMBER, telLink } from '../services/emergency';
 
 interface HealthReviewPanelProps {
     data: HealthFormData;
-    riskLevel?: RiskLevel;
-    diagnosis?: string;
+    riskLevel?: string;
+    explanation?: string;
+    department?: string;
     aiConfidence?: number;
-    recommendedActions?: string[];
 }
 
 export const HealthReviewPanel: React.FC<HealthReviewPanelProps> = ({
     data,
     riskLevel,
-    diagnosis,
+    explanation,
+    department,
     aiConfidence,
-    recommendedActions,
 }) => {
+    const risk = riskInfo(riskLevel);
     const navigate = useNavigate();
 
     return (
@@ -127,40 +132,32 @@ export const HealthReviewPanel: React.FC<HealthReviewPanelProps> = ({
                 </section>
 
                 {/* AI Analysis (if available) */}
-                {riskLevel && diagnosis && (
+                {riskLevel && explanation && (
                     <section className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-2xl p-6 border border-blue-100 dark:border-blue-800/30">
                         <h3 className="text-sm font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 mb-4 flex items-center gap-2">
                             <span className="material-symbols-outlined">psychology_alt</span>
-                            AI Analysis
+                            Urgency Check
                         </h3>
                         <div className="space-y-4">
                             <div>
                                 <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
                                     Risk Level:
                                 </p>
-                                <p
-                                    className={`text-lg font-bold ${riskLevel === RiskLevel.CRITICAL || riskLevel === RiskLevel.HIGH
-                                        ? 'text-red-600 dark:text-red-400'
-                                        : riskLevel === RiskLevel.MEDIUM
-                                            ? 'text-amber-600 dark:text-amber-400'
-                                            : 'text-green-600 dark:text-green-400'
-                                        }`}
-                                >
-                                    {riskLevel}
-                                </p>
+                                <div className="mt-1"><RiskBadge level={riskLevel} size="lg" showTitle /></div>
+                                <p className="text-sm font-medium text-slate-600 dark:text-slate-300 mt-2">{risk.action}</p>
                             </div>
                             <div>
                                 <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                                    Diagnosis:
+                                    Why:
                                 </p>
                                 <p className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed">
-                                    {diagnosis}
+                                    {explanation}
                                 </p>
                             </div>
                             {aiConfidence && (
                                 <div>
                                     <div className="flex justify-between text-xs font-bold text-slate-500 mb-2">
-                                        <span className="uppercase tracking-wider">AI Confidence</span>
+                                        <span className="uppercase tracking-wider">Confidence</span>
                                         <span className="text-primary">{aiConfidence}%</span>
                                     </div>
                                     <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-3 shadow-inner">
@@ -171,25 +168,10 @@ export const HealthReviewPanel: React.FC<HealthReviewPanelProps> = ({
                                     </div>
                                 </div>
                             )}
-                            {recommendedActions && recommendedActions.length > 0 && (
-                                <div>
-                                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">
-                                        Recommended Actions:
-                                    </p>
-                                    <ul className="space-y-2">
-                                        {recommendedActions.map((action, i) => (
-                                            <li key={i} className="flex items-start gap-2 text-sm text-slate-700 dark:text-slate-200">
-                                                <span className="w-1.5 h-1.5 rounded-full bg-primary mt-2 shrink-0"></span>
-                                                {action}
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            )}
 
                             {/* Action Buttons based on Risk */}
                             <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-700/50">
-                                {(riskLevel === RiskLevel.LOW || riskLevel === RiskLevel.MEDIUM) ? (
+                                {risk.light !== 'RED' ? (
                                     <button
                                         onClick={() => navigate('/')}
                                         className="w-full py-3 bg-gradient-to-r from-primary to-indigo-600 text-white rounded-xl font-bold shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2"
@@ -198,33 +180,35 @@ export const HealthReviewPanel: React.FC<HealthReviewPanelProps> = ({
                                         Book Checkup Appointment
                                     </button>
                                 ) : (
-                                    <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl space-y-3">
-                                        <div className="flex items-center gap-3 text-red-600 dark:text-red-400 font-bold">
-                                            <span className="material-symbols-outlined text-2xl animate-pulse">emergency</span>
-                                            <span>Critical Action Required</span>
+                                    <div className="space-y-4">
+                                        <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl space-y-3">
+                                            <div className="flex items-center gap-3 text-red-600 dark:text-red-400 font-bold">
+                                                <span className="material-symbols-outlined text-2xl animate-pulse">emergency</span>
+                                                <span>Go to a hospital now</span>
+                                            </div>
+                                            <a
+                                                href={telLink(AMBULANCE_NUMBER)}
+                                                className="w-full py-3 bg-red-600 text-white rounded-xl font-bold shadow-lg hover:bg-red-700 transition-colors flex items-center justify-center gap-2"
+                                            >
+                                                <span className="material-symbols-outlined">call</span>
+                                                Call {AMBULANCE_NUMBER} (Ambulance)
+                                            </a>
+                                            <a
+                                                href={telLink(EMERGENCY_NUMBER)}
+                                                className="block text-center text-sm font-bold text-red-700 dark:text-red-300 underline underline-offset-2"
+                                            >
+                                                or call {EMERGENCY_NUMBER} (National Emergency)
+                                            </a>
                                         </div>
-                                        <p className="text-sm text-red-700 dark:text-red-300">
-                                            Immediate medical attention is recommended to prevent further health loss.
-                                        </p>
-                                        <a
-                                            href={telLink(AMBULANCE_NUMBER)}
-                                            className="w-full py-3 bg-red-600 text-white rounded-xl font-bold shadow-lg hover:bg-red-700 transition-colors flex items-center justify-center gap-2"
-                                        >
-                                            <span className="material-symbols-outlined">call</span>
-                                            Call {AMBULANCE_NUMBER} (Ambulance)
-                                        </a>
-                                        <a
-                                            href={telLink(EMERGENCY_NUMBER)}
-                                            className="block text-center text-sm font-bold text-red-700 dark:text-red-300 underline underline-offset-2"
-                                        >
-                                            or call {EMERGENCY_NUMBER} (National Emergency)
-                                        </a>
+                                        <HospitalList specialty={department} symptoms={data.symptoms} />
                                     </div>
                                 )}
                             </div>
                         </div>
                     </section>
                 )}
+
+                {riskLevel && <Disclaimer />}
             </div>
         </div>
     );
