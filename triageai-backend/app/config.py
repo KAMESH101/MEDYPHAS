@@ -35,6 +35,8 @@ class Settings(BaseSettings):
 
     # CORS: comma-separated list of allowed frontend origins
     CORS_ORIGINS: str = "http://localhost:3000,http://localhost:5173"
+    # Optional regex for extra origins, e.g. Vercel preview URLs: ^https://medyphas-ai-.*\.vercel\.app$
+    CORS_ORIGIN_REGEX: str = ""
 
     # Auth
     SECRET_KEY: str = "dev-only-insecure-secret-set-SECRET_KEY-in-env"

@@ -1,0 +1,38 @@
+# Render Blueprint for the Medyphas AI backend (free tier).
+# Render dashboard -> New -> Blueprint -> pick this repo. Secrets marked sync:false are asked for once.
+services:
+  - type: web
+    name: medyphas-backend
+    runtime: python
+    plan: free
+    region: singapore
+    rootDir: triageai-backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    autoDeployTrigger: commit
+    envVars:
+      # Python version comes from .python-version (3.11)
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-3.8-flash
+      - key: GEMINI_TTS_MODEL
+        value: gemini-3.8-flash-tts
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GROQ_MODEL
+        value: openai/gpt-oss-120b
+      # Your Vercel production URL, e.g. https://medyphas-ai.vercel.app (comma-separate several)
+      - key: CORS_ORIGINS
+        sync: false
+      # Optional: also allow Vercel preview deployments, e.g. ^https://medyphas-ai-.*\.vercel\.app$
+      - key: CORS_ORIGIN_REGEX
+        sync: false
+      # SQLite on the free tier's temporary disk; demo users and hospitals are re-seeded on every start
+      - key: DATABASE_URL
+        value: sqlite+aiosqlite:///./data/triageai.db
+      - key: SECRET_KEY
+        generateValue: true
+      - key: SEED_DEMO_USERS
+        value: "true"
