@@ -36,7 +36,6 @@ async def lifespan(app: FastAPI):
 
     # ML is optional: if the model can't load, triage runs on the clinical rules only.
     ml_service.load_models()
-    quickfix.quickfix_model.load()
 
     gemini_service.initialize()
 

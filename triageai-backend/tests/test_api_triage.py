@@ -159,3 +159,48 @@ async def test_demo_users_seed_idempotently(test_db):
 async def test_assistant_chat_without_key_is_503(client: AsyncClient):
     response = await client.post('/api/assistant/chat', json={'history': [], 'message': 'hello'})
     assert response.status_code == 503
+
+
+# --- Specialist helper (formerly Quick Fix) -------------------------------
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("path", ['/api/quick-fix', '/api/specialist-helper'])
+async def test_quick_fix_never_returns_medicine_or_disease(client: AsyncClient, path):
+    response = await client.post(path, json={'symptoms': ['Cough', 'Sneezing', 'Fever'], 'history': 'Asthma'})
+
+    assert response.status_code == 200
+    data = response.json()
+    body = str(data).lower()
+    assert 'medicine' not in data and 'disease' not in data
+    for drug in ('paracetamol', 'ibuprofen', 'amoxicillin', 'oseltamivir', 'metformin', 'antibiotic'):
+        assert drug not in body
+    assert data['suggestions']
+    assert 'not a diagnosis' in data['disclaimer']
+
+
+@pytest.mark.asyncio
+async def test_specialist_helper_flags_red_flags(client: AsyncClient):
+    response = await client.post('/api/specialist-helper', json={'symptoms': ['Chest Pain', 'Nausea']})
+
+    data = response.json()
+    assert data['urgent'] is True
+    assert data['red_flags'] == ['Chest Pain']
+    assert '108' in data['message']
+    assert data['suggestions'][0]['specialty'] == 'Cardiology'
+
+
+@pytest.mark.asyncio
+async def test_specialist_helper_routes_by_symptoms(client: AsyncClient):
+    response = await client.post('/api/specialist-helper', json={'symptoms': ['Burning Urination', 'Frequent Urination']})
+
+    data = response.json()
+    assert data['urgent'] is False
+    assert data['suggestions'][0]['specialty'] == 'Urology'
+
+
+@pytest.mark.asyncio
+async def test_symptom_list_available_without_model(client: AsyncClient):
+    response = await client.get('/api/symptoms')
+
+    assert response.status_code == 200
+    assert 'Chest Pain' in response.json()['symptoms']

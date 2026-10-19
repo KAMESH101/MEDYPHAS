@@ -47,7 +47,6 @@ class Settings(BaseSettings):
     # ML model paths
     MODEL_DIR: Path = BASE_DIR / "ml" / "models"
     DATA_DIR: Path = BASE_DIR / "ml" / "data"
-    QUICKFIX_MODEL_PATH: Path = BASE_DIR / "app" / "models" / "quickfix_model.pkl"
 
     # Feature definitions
     SYMPTOM_FEATURES: List[str] = [
