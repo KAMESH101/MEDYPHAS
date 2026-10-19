@@ -1,7 +1,19 @@
 """Async SQLAlchemy database setup."""
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import declarative_base
+from sqlalchemy.engine import make_url
+from pathlib import Path
 from app.config import settings
+
+
+def _ensure_sqlite_dir(url: str) -> None:
+    """Create the folder for a file-based SQLite database if it doesn't exist yet."""
+    parsed = make_url(url)
+    if parsed.get_backend_name() == "sqlite" and parsed.database and parsed.database != ":memory:":
+        Path(parsed.database).parent.mkdir(parents=True, exist_ok=True)
+
+
+_ensure_sqlite_dir(settings.DATABASE_URL)
 
 # Create async engine
 engine = create_async_engine(
