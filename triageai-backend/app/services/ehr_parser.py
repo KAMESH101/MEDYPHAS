@@ -1,98 +1,90 @@
-"""EHR/EMR document parsing service using Gemini Vision."""
-import base64
-import json
-import google.generativeai as genai
-from app.config import settings
-from app.schemas.patient import PatientInput, GenderEnum
+"""EHR/EMR document parsing service using Gemini (multimodal, structured JSON output)."""
+from typing import List, Literal, Optional
+
+from google.genai import types
+from pydantic import BaseModel, Field, ValidationError
+
+from app.schemas.patient import GenderEnum, PatientInput
+from app.services.gemini_service import gemini_service
 
 
-# Extraction prompt for Gemini Vision
-EHR_EXTRACTION_PROMPT = """You are a medical data extraction AI. Analyze this medical document (EHR/EMR) and extract the following patient information in JSON format:
+class ExtractedPatient(BaseModel):
+    """Response schema Gemini must fill. Unknown values are null, never guessed."""
 
-{
-  "age": <integer>,
-  "gender": "<M, F, or Other>",
-  "symptoms": ["<symptom1>", "<symptom2>", ...],
-  "bp_systolic": <integer or null>,
-  "bp_diastolic": <integer or null>,
-  "heart_rate": <integer or null>,
-  "temperature": <float or null>,
-  "spo2": <float or null>,
-  "pre_existing": ["<condition1>", "<condition2>", ...]
-}
+    age: Optional[int] = Field(None, description="Patient age in years, null if not visible")
+    gender: Optional[Literal["M", "F", "Other"]] = None
+    symptoms: List[str] = Field(default_factory=list, description="Symptoms or complaints, lowercase")
+    bp_systolic: Optional[int] = None
+    bp_diastolic: Optional[int] = None
+    heart_rate: Optional[int] = None
+    temperature: Optional[float] = Field(None, description="Body temperature in Celsius")
+    spo2: Optional[float] = Field(None, description="Oxygen saturation in percent")
+    pre_existing: List[str] = Field(default_factory=list, description="Known conditions, lowercase")
+
+
+EHR_EXTRACTION_PROMPT = """You are a medical data extraction assistant. Read this medical document (EHR/EMR,
+prescription or lab report) and fill in the JSON schema.
 
 Rules:
-- Extract only information explicitly visible in the document
-- Use null for missing vital signs
-- Normalize symptom names to lowercase (e.g., "Chest Pain" → "chest pain")
+- Extract only information explicitly visible in the document; use null (or an empty list) when missing
+- Convert temperature to Celsius
+- Normalize symptom and condition names to lowercase (e.g. "Chest Pain" -> "chest pain")
 - For gender, use "M", "F", or "Other"
-- Return ONLY valid JSON, no additional text
-- If age is not visible, use a reasonable estimate based on context
+- Do not add diagnoses or medicines that are not written in the document"""
 
-Return the JSON object now:"""
+# PatientInput rejects values outside these ranges; drop implausible readings instead of failing.
+_RANGES = {
+    "bp_systolic": (50, 250),
+    "bp_diastolic": (30, 150),
+    "heart_rate": (30, 220),
+    "temperature": (35.0, 43.0),
+    "spo2": (70.0, 100.0),
+}
+
+
+def _in_range(name: str, value):
+    if value is None:
+        return None
+    low, high = _RANGES[name]
+    return value if low <= value <= high else None
 
 
 async def parse_ehr_document(content: bytes, content_type: str) -> PatientInput:
     """
-    Parse EHR/EMR document using Gemini Vision API.
-    
+    Parse EHR/EMR document using Gemini.
+
     Args:
         content: File content as bytes
         content_type: MIME type (image/png, image/jpeg, application/pdf)
-        
+
     Returns:
         PatientInput with extracted data
-        
+
     Raises:
-        Exception if parsing fails
+        ValueError if Gemini isn't configured or the output can't be used
     """
-    if not settings.GEMINI_API_KEY or settings.GEMINI_API_KEY == "your_api_key_here":
-        raise ValueError("Gemini API key not configured. Cannot parse documents.")
-    
+    if not gemini_service.is_available():
+        raise ValueError("Gemini API key not configured on the server. Cannot parse documents.")
+
     try:
-        # Initialize Gemini with vision model
-        genai.configure(api_key=settings.GEMINI_API_KEY)
-        vision_model = genai.GenerativeModel("gemini-1.5-flash")
-        
-        # Encode content for Gemini
-        b64_content = base64.b64encode(content).decode()
-        
-        # Create multimodal request
-        response = await vision_model.generate_content_async([
-            {
-                'mime_type': content_type,
-                'data': b64_content
-            },
-            EHR_EXTRACTION_PROMPT
-        ])
-        
-        # Parse response
-        text = response.text.strip()
-        
-        # Strip markdown code fences if present
-        if text.startswith('```'):
-            lines = text.split('\n')
-            text = '\n'.join(lines[1:-1])  # Remove first and last lines
-            if text.startswith('json'):
-                text = text[4:].strip()
-        
-        # Parse JSON
-        data = json.loads(text)
-        
-        # Validate and build PatientInput
-        return PatientInput(
-            age=data.get('age', 30),
-            gender=GenderEnum(data.get('gender', 'Other')),
-            symptoms=data.get('symptoms') or ['unspecified'],
-            bp_systolic=data.get('bp_systolic'),
-            bp_diastolic=data.get('bp_diastolic'),
-            heart_rate=data.get('heart_rate'),
-            temperature=data.get('temperature'),
-            spo2=data.get('spo2'),
-            pre_existing=data.get('pre_existing') or []
+        data = await gemini_service.generate_json(
+            [types.Part.from_bytes(data=content, mime_type=content_type), EHR_EXTRACTION_PROMPT],
+            ExtractedPatient,
         )
-        
-    except json.JSONDecodeError as e:
-        raise ValueError(f"Failed to parse Gemini response as JSON: {e}")
+    except ValidationError as e:
+        raise ValueError(f"Gemini returned data that doesn't match the schema: {e}")
     except Exception as e:
         raise Exception(f"EHR parsing failed: {e}")
+
+    age = data.age if data.age is not None and 0 <= data.age <= 120 else 30
+    return PatientInput(
+        age=age,
+        gender=GenderEnum(data.gender or "Other"),
+        symptoms=data.symptoms or ["unspecified"],
+        bp_systolic=_in_range("bp_systolic", data.bp_systolic),
+        bp_diastolic=_in_range("bp_diastolic", data.bp_diastolic),
+        heart_rate=_in_range("heart_rate", data.heart_rate),
+        temperature=_in_range("temperature", data.temperature),
+        spo2=_in_range("spo2", data.spo2),
+        pre_existing=data.pre_existing,
+    )

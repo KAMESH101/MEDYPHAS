@@ -13,7 +13,7 @@ from app.database import init_db
 from app.services.ml_service import ml_service
 from app.services.gemini_service import gemini_service
 from app.services.seed import seed_all
-from app.api import triage, patients, stats, auth, websocket, quickfix
+from app.api import triage, patients, stats, auth, websocket, quickfix, assistant
 from app.models.user import User  # noqa: F401  (registers the table with Base)
 
 
@@ -65,6 +65,7 @@ app.include_router(triage.router)
 app.include_router(patients.router)
 app.include_router(stats.router)
 app.include_router(quickfix.router)
+app.include_router(assistant.router)
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(websocket.router)
 

@@ -21,7 +21,7 @@ class Settings(BaseSettings):
 
     # AI providers (server-side only; never sent to the browser)
     GEMINI_API_KEY: str = ""
-    GEMINI_MODEL: str = "gemini-2.5-flash"
+    GEMINI_MODEL: str = "gemini-3.8-flash"
 
     # Database. On Render's free tier the disk is temporary, so demo data is re-seeded on startup.
     DATABASE_URL: str = f"sqlite+aiosqlite:///{DEFAULT_DB_PATH.as_posix()}"
